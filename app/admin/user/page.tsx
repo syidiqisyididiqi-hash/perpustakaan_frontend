@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FiSearch, FiEdit, FiTrash2, FiPlus } from "react-icons/fi";
-import { usersApi } from "@/app/lib/api/users";
+
+const API_URL = "http://127.0.0.1:8000/api/users";
 
 export default function UserPage() {
   const [query, setQuery] = useState("");
@@ -17,10 +18,9 @@ export default function UserPage() {
 
   const fetchUsers = async () => {
     try {
-      const res = await usersApi.getAll();
-      setUsers(res.data);
-    } catch (err) {
-      console.log(err);
+      const res = await fetch(API_URL);
+      const data = await res.json();
+      setUsers(data.data ?? data);
     } finally {
       setLoading(false);
     }
@@ -28,7 +28,7 @@ export default function UserPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Hapus user ini?")) return;
-    await usersApi.delete(id);
+    await fetch(`${API_URL}/${id}`, { method: "DELETE" });
     fetchUsers();
   };
 
@@ -46,57 +46,57 @@ export default function UserPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
 
       {/* HEADER */}
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-6 text-white shadow-lg">
-        <div className="flex flex-col md:flex-row md:justify-between gap-4">
+      <div className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-slate-900 rounded-2xl p-5 text-white shadow-lg">
+        <div className="flex flex-col lg:flex-row gap-5 lg:items-center lg:justify-between">
 
           <div>
-            <h1 className="text-3xl font-bold">Manajemen User</h1>
-            <p className="text-slate-300 text-sm">
-              Kelola pengguna sistem perpustakaan
+            <h1 className="text-2xl font-bold">User</h1>
+            <p className="text-indigo-100 text-sm">
+              Mengelola pengguna sistem perpustakaan
             </p>
           </div>
 
-          <div className="flex gap-3">
-            <div className="flex bg-white rounded-xl overflow-hidden shadow w-72">
+          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+
+            <div className="flex bg-white rounded-xl overflow-hidden shadow w-full sm:w-72">
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Cari user..."
-                className="flex-1 px-4 py-2 text-sm outline-none text-slate-800"
+                className="flex-1 px-4 py-2.5 text-sm outline-none text-slate-800"
               />
               <button
                 onClick={() => setSearch(query)}
-                className="px-4 bg-slate-900 text-white"
+                className="px-4 bg-indigo-600 text-white"
               >
-                <FiSearch />
+                <FiSearch size={16} />
               </button>
             </div>
 
             <Link href="/admin/user/create">
-              <button className="flex items-center gap-2 bg-white text-slate-900 px-5 py-2 rounded-xl text-sm font-semibold shadow hover:bg-slate-100">
-                <FiPlus />
-                Tambah
+              <button className="flex items-center gap-2 bg-white text-indigo-700 px-5 py-2.5 rounded-xl text-sm font-semibold shadow hover:scale-105 transition">
+                <FiPlus size={16} />
+                Tambah User
               </button>
             </Link>
+
           </div>
         </div>
       </div>
 
       {/* TABLE */}
-      <div className="bg-white rounded-2xl shadow-lg border overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
 
         <div className="overflow-x-auto">
-
           <table className="w-full text-sm">
 
-            {/* HEADER */}
-            <thead className="bg-slate-100 text-slate-700 sticky top-0 z-10">
+            <thead className="bg-slate-100 text-slate-700">
               <tr>
-                <th className="p-4 text-left font-semibold">User</th>
-                <th className="p-4 text-left">No Anggota</th>
+                <th className="p-4 text-left">User</th>
+                <th className="p-4 text-left">Member</th>
                 <th className="p-4 text-left">Kontak</th>
                 <th className="p-4 text-left">Alamat</th>
                 <th className="p-4 text-center">Role</th>
@@ -105,13 +105,11 @@ export default function UserPage() {
               </tr>
             </thead>
 
-            {/* BODY */}
             <tbody>
-
               {loading && (
                 <tr>
-                  <td colSpan={7} className="text-center py-16 text-slate-400">
-                    Loading data...
+                  <td colSpan={7} className="text-center py-12 text-slate-400">
+                    Memuat data...
                   </td>
                 </tr>
               )}
@@ -120,72 +118,52 @@ export default function UserPage() {
                 filtered.map((u, i) => (
                   <tr
                     key={u.id}
-                    className={`border-t transition hover:bg-slate-50 ${
-                      i % 2 === 0 ? "bg-white" : "bg-slate-50/40"
+                    className={`border-t hover:bg-indigo-50 ${
+                      i % 2 === 0 ? "bg-white" : "bg-slate-50"
                     }`}
                   >
-                    {/* USER */}
                     <td className="p-4">
                       <p className="font-semibold text-slate-800">{u.name}</p>
                       <p className="text-xs text-slate-500">{u.email}</p>
                     </td>
 
-                    {/* MEMBER */}
-                    <td className="p-4 text-slate-600">
-                      {u.member_number || "-"}
-                    </td>
+                    <td className="p-4 text-slate-600">{u.member_number || "-"}</td>
+                    <td className="p-4 text-slate-600">{u.phone || "-"}</td>
 
-                    {/* CONTACT */}
-                    <td className="p-4 text-slate-600">
-                      {u.phone || "-"}
-                    </td>
-
-                    {/* ADDRESS */}
                     <td className="p-4 max-w-xs truncate text-slate-600">
                       {u.address || "-"}
                     </td>
 
-                    {/* ROLE */}
                     <td className="p-4 text-center">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${roleColor(
-                          u.role
-                        )}`}
-                      >
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${roleColor(u.role)}`}>
                         {u.role}
                       </span>
                     </td>
 
-                    {/* STATUS */}
                     <td className="p-4 text-center">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          u.status === "active"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
-                      >
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        u.status === "active"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
+                      }`}>
                         {u.status === "active" ? "Aktif" : "Nonaktif"}
                       </span>
                     </td>
 
-                    {/* ACTION */}
                     <td className="p-4">
                       <div className="flex justify-center gap-2">
-
                         <Link href={`/admin/user/${u.id}/edit`}>
-                          <button className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100">
+                          <button className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200">
                             <FiEdit size={16} />
                           </button>
                         </Link>
 
                         <button
                           onClick={() => handleDelete(u.id)}
-                          className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
+                          className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
                         >
                           <FiTrash2 size={16} />
                         </button>
-
                       </div>
                     </td>
                   </tr>
@@ -193,17 +171,14 @@ export default function UserPage() {
 
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={7}
-                    className="text-center py-16 text-slate-400"
-                  >
+                  <td colSpan={7} className="text-center py-12 text-slate-400">
                     Tidak ada data user
                   </td>
                 </tr>
               )}
             </tbody>
-          </table>
 
+          </table>
         </div>
       </div>
     </div>
