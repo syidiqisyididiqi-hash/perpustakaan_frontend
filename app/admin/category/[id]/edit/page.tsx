@@ -9,7 +9,7 @@ const API_URL = "http://127.0.0.1:8000/api/categories";
 export default function EditCategoryPage() {
   const router = useRouter();
   const params = useParams();
-  const id = params.id;
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [form, setForm] = useState({ name: "", description: "" });
   const [loading, setLoading] = useState(false);
@@ -23,7 +23,7 @@ export default function EditCategoryPage() {
   const fetchCategory = async () => {
     try {
       const res = await fetch(`${API_URL}/${id}`);
-      if (!res.ok) throw new Error("Network error");
+      if (!res.ok) throw new Error();
       const data = await res.json();
       const category = data?.data ?? data;
 
@@ -52,7 +52,7 @@ export default function EditCategoryPage() {
         body: JSON.stringify(form),
       });
 
-      if (!res.ok) throw new Error("Gagal update kategori");
+      if (!res.ok) throw new Error();
 
       router.push("/admin/category");
     } catch {
@@ -72,7 +72,6 @@ export default function EditCategoryPage() {
   return (
     <div className="min-h-screen bg-slate-100 py-10 px-4">
       <div className="max-w-3xl mx-auto space-y-6">
-
         <div className="bg-gradient-to-r from-indigo-600 to-slate-900 rounded-2xl p-6 text-white shadow-lg">
           <h1 className="text-2xl font-bold">Edit Kategori</h1>
           <p className="text-indigo-100 text-sm mt-1">Perbarui data kategori sistem</p>
@@ -80,7 +79,6 @@ export default function EditCategoryPage() {
 
         <div className="bg-white rounded-2xl shadow-lg border p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-
             <Section title="Informasi Kategori">
               <div className="space-y-4">
                 <Input
@@ -120,7 +118,6 @@ export default function EditCategoryPage() {
                 {loading ? "Menyimpan..." : "Update Kategori"}
               </button>
             </div>
-
           </form>
         </div>
       </div>
