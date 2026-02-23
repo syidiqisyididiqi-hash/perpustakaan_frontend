@@ -1,113 +1,260 @@
 "use client";
 
 import { useRouter, useParams } from "next/navigation";
-import { useState, ChangeEvent, FormEvent } from "react";
+import { useState, useEffect, ChangeEvent, FormEvent } from "react";
+import { CategoriesAPI } from "@/app/lib/api/category";
+import {
+  FiBook,
+  FiUser,
+  FiHash,
+  FiLayers,
+  FiPackage,
+  FiMapPin,
+  FiImage,
+  FiCalendar,
+} from "react-icons/fi";
+
+const API_URL = "http://127.0.0.1:8000/api/books";
+const STORAGE_URL = "http://127.0.0.1:8000/storage";
 
 export default function EditBookPage() {
   const router = useRouter();
   const params = useParams();
+  const id = params.id;
+
+  const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [categories, setCategories] = useState<any[]>([]);
 
   const [form, setForm] = useState({
+    category_id: "",
+    isbn: "",
     title: "",
     author: "",
-    category: "",
+    publisher: "",
+    published_year: "",
     stock: "",
-    status: "Available",
+    rack_code: "",
+    cover: null as File | null,
+    cover_url: "",
   });
 
-  const handleChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  useEffect(() => {
+    if (!id) return;
+    fetchData();
+  }, [id]);
+
+  const fetchData = async () => {
+    try {
+      const [bookRes, catRes] = await Promise.all([
+        fetch(`${API_URL}/${id}`),
+        CategoriesAPI.getAll(),
+      ]);
+
+      const bookJson = await bookRes.json();
+      const book = bookJson.data ?? bookJson;
+
+      setCategories(catRes.data || []);
+
+      setForm({
+        category_id: String(book.category_id ?? ""),
+        isbn: book.isbn ?? "",
+        title: book.title ?? "",
+        author: book.author ?? "",
+        publisher: book.publisher ?? "",
+        published_year: String(book.published_year ?? ""),
+        stock: String(book.stock ?? ""),
+        rack_code: book.rack_code ?? "",
+        cover: null,
+        cover_url: book.cover ?? "",
+      });
+    } catch {
+      alert("Gagal mengambil data buku");
+    } finally {
+      setPageLoading(false);
+    }
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    alert(`Book ID ${params.id} berhasil diupdate`);
-    router.push("/admin/book");
+  const handleChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value, files } = e.target as HTMLInputElement;
+
+    if (name === "cover" && files) {
+      setForm({ ...form, cover: files[0] });
+    } else {
+      setForm({ ...form, [name]: value });
+    }
   };
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    try {
+      setLoading(true);
+
+      const fd = new FormData();
+
+      Object.entries(form).forEach(([k, v]) => {
+        if (k !== "cover_url" && v !== null) fd.append(k, v as any);
+      });
+
+      fd.append("_method", "PUT");
+
+      const res = await fetch(`${API_URL}/${id}`, {
+        method: "POST",
+        body: fd,
+        headers: { Accept: "application/json" },
+      });
+
+      if (!res.ok) throw new Error();
+
+      alert("Buku berhasil diupdate");
+      router.push("/admin/book");
+    } catch {
+      alert("Gagal update buku");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (pageLoading)
+    return (
+      <div className="h-screen flex items-center justify-center text-slate-500">
+        Loading...
+      </div>
+    );
 
   return (
-    <div className="max-w-2xl mx-auto px-4">
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-slate-800">Edit Buku</h1>
-          <p className="text-slate-500 text-sm mt-1">Perbarui data buku</p>
+    <div className="min-h-screen bg-slate-100 py-10 px-4">
+      <div className="max-w-4xl mx-auto space-y-6">
+
+        <div className="bg-gradient-to-r from-indigo-600 to-slate-900 rounded-2xl p-6 text-white shadow-lg">
+          <h1 className="text-2xl font-bold">Edit Buku</h1>
+          <p className="text-indigo-100 text-sm">
+            Perbarui data buku perpustakaan
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-700">Judul Buku</label>
-            <input
-              name="title"
-              value={form.title}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-1 focus:ring-slate-300 outline-none"
-            />
-          </div>
+        <div className="bg-white rounded-2xl shadow-lg border p-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
 
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-700">Penulis</label>
-            <input
-              name="author"
-              value={form.author}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-1 focus:ring-slate-300 outline-none"
-            />
-          </div>
+            <Section title="Informasi Buku">
+              <div className="grid md:grid-cols-2 gap-5">
+                <Input icon={<FiBook />} name="title" value={form.title} onChange={handleChange} placeholder="Judul Buku" />
+                <Input icon={<FiUser />} name="author" value={form.author} onChange={handleChange} placeholder="Penulis" />
+                <Input icon={<FiHash />} name="isbn" value={form.isbn} onChange={handleChange} placeholder="ISBN" />
 
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-700">Kategori</label>
-            <input
-              name="category"
-              value={form.category}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-1 focus:ring-slate-300 outline-none"
-            />
-          </div>
+                <SelectCategory
+                  icon={<FiLayers />}
+                  value={form.category_id}
+                  options={categories}
+                  onChange={handleChange}
+                />
 
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-700">Stok</label>
-            <input
-              type="number"
-              name="stock"
-              value={form.stock}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-1 focus:ring-slate-300 outline-none"
-            />
-          </div>
+                <Input icon={<FiPackage />} name="publisher" value={form.publisher} onChange={handleChange} placeholder="Penerbit" />
+                <Input icon={<FiCalendar />} name="published_year" value={form.published_year} onChange={handleChange} placeholder="Tahun Terbit" />
+                <Input icon={<FiMapPin />} name="rack_code" value={form.rack_code} onChange={handleChange} placeholder="Kode Rak" />
+                <Input icon={<FiPackage />} name="stock" value={form.stock} onChange={handleChange} placeholder="Stock" />
+              </div>
+            </Section>
 
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-700">Status</label>
-            <select
-              name="status"
-              value={form.status}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-1 focus:ring-slate-300 outline-none"
-            >
-              <option value="Available">Available</option>
-              <option value="Out of Stock">Out of Stock</option>
-            </select>
-          </div>
+            <Section title="Cover Buku">
+              <div className="space-y-3">
+                {form.cover_url && !form.cover && (
+                  <img
+                    src={`${STORAGE_URL}/${form.cover_url}`}
+                    className="w-40 rounded-lg border"
+                  />
+                )}
 
-          <div className="flex gap-3 pt-3">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm font-medium hover:bg-slate-50 transition"
-            >
-              Batal
-            </button>
+                {form.cover && (
+                  <img
+                    src={URL.createObjectURL(form.cover)}
+                    className="w-40 rounded-lg border"
+                  />
+                )}
 
-            <button
-              type="submit"
-              className="flex-1 bg-slate-900 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-700 shadow-sm transition"
-            >
-              Update
-            </button>
-          </div>
-        </form>
+                <div className="relative">
+                  <div className="absolute left-3 top-3 text-slate-400">
+                    <FiImage />
+                  </div>
+                  <input
+                    type="file"
+                    name="cover"
+                    onChange={handleChange}
+                    className="w-full pl-10 pr-3 py-2.5 rounded-lg border text-sm"
+                  />
+                </div>
+              </div>
+            </Section>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="flex-1 border border-slate-300 py-3 rounded-xl font-semibold text-slate-700 hover:bg-slate-100"
+              >
+                Batal
+              </button>
+
+              <button
+                disabled={loading}
+                className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-semibold shadow hover:bg-indigo-700"
+              >
+                {loading ? "Menyimpan..." : "Update Buku"}
+              </button>
+            </div>
+
+          </form>
+        </div>
+
       </div>
+    </div>
+  );
+}
+
+function Section({ title, children }: any) {
+  return (
+    <div className="space-y-4">
+      <h2 className="font-semibold text-slate-700 border-b pb-2">{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+function Input({ icon, name, value, onChange, placeholder }: any) {
+  return (
+    <div className="relative">
+      <div className="absolute left-3 top-3 text-slate-400">{icon}</div>
+      <input
+        name={name}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className="w-full pl-10 pr-3 py-2.5 rounded-lg border text-sm"
+      />
+    </div>
+  );
+}
+
+function SelectCategory({ icon, value, options, onChange }: any) {
+  return (
+    <div className="relative">
+      <div className="absolute left-3 top-3 text-slate-400">{icon}</div>
+      <select
+        name="category_id"
+        value={value}
+        onChange={onChange}
+        className="w-full pl-10 pr-3 py-2.5 rounded-lg border text-sm"
+      >
+        <option value="">Pilih Kategori</option>
+        {options.map((c: any) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
