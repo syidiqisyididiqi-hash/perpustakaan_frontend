@@ -21,21 +21,19 @@ export default function NavbarAdmin() {
   const menus = [
     { name: "Dashboard", href: "/admin", icon: HiHome },
     { name: "Users", href: "/admin/user", icon: HiUsers },
-    { name: "Book", href: "/admin/book", icon: HiBookOpen },
     { name: "Category", href: "/admin/category", icon: HiCollection },
-    { name: "Fine", href: "/admin/fine", icon: HiCurrencyDollar },
+    { name: "Book", href: "/admin/book", icon: HiBookOpen },
     { name: "Loan", href: "/admin/loan", icon: HiClipboardList },
+    { name: "Fine", href: "/admin/fine", icon: HiCurrencyDollar },
   ];
 
   const SidebarContent = ({ onClick }: { onClick?: () => void }) => (
     <div className="flex flex-col h-full overflow-y-auto p-6">
-      {/* LOGO */}
       <div className="mb-10">
         <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
-        <p className="text-sm text-slate-400 mt-1">Library Management</p>
+        <p className="text-sm text-slate-400 mt-1">Management Perpustakaan</p>
       </div>
 
-      {/* MENU */}
       <nav className="flex flex-col gap-2 flex-1">
         {menus.map((menu) => {
           const Icon = menu.icon;
@@ -62,7 +60,6 @@ export default function NavbarAdmin() {
         })}
       </nav>
 
-      {/* PROFILE */}
       <div className="bg-slate-800/80 rounded-xl p-4 border border-slate-700 mt-6">
         <p className="font-medium text-white">Admin User</p>
         <p className="text-xs text-slate-400">Super Administrator</p>
@@ -72,7 +69,6 @@ export default function NavbarAdmin() {
 
   return (
     <>
-      {/* MOBILE TOPBAR */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 h-16 px-4 flex items-center justify-between bg-slate-900 text-white shadow">
         <h1 className="font-bold text-lg">Admin Panel</h1>
         <button onClick={() => setIsOpen(!isOpen)}>
@@ -80,14 +76,12 @@ export default function NavbarAdmin() {
         </button>
       </div>
 
-      {/* MOBILE SIDEBAR */}
       <div
         className={`
           fixed inset-0 z-40 md:hidden transition
           ${isOpen ? "visible" : "invisible"}
         `}
       >
-        {/* overlay */}
         <div
           onClick={() => setIsOpen(false)}
           className={`absolute inset-0 bg-black/50 transition-opacity
