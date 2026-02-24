@@ -1,212 +1,181 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { FiSearch, FiPlus, FiTrash2, FiCheck, FiEye, FiX, FiEdit } from "react-icons/fi";
+import { FiSearch, FiEdit, FiTrash2, FiPlus, FiEye } from "react-icons/fi";
+
+const API_URL = "http://127.0.0.1:8000/api/loans";
+
+type Loan = {
+  id: number;
+  user: string;
+  loanDate: string;
+  returnDate: string;
+  returned: boolean;
+};
+
+const formatDate = (dateString: string) => {
+  if (!dateString) return "-";
+  return dateString.split("T")[0];
+};
 
 export default function LoanPage() {
   const [query, setQuery] = useState("");
-  const [selectedLoan, setSelectedLoan] = useState<any>(null);
-  const [editingLoan, setEditingLoan] = useState<any>(null);
+  const [search, setSearch] = useState("");
+  const [loans, setLoans] = useState<Loan[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [loans, setLoans] = useState([
-    {
-      id: 1,
-      user: "John Doe",
-      book: "Clean Code",
-      loanDate: "2026-02-10",
-      returnDate: "2026-02-13",
-      returned: false,
-    },
-    {
-      id: 2,
-      user: "Sarah Smith",
-      book: "Atomic Habits",
-      loanDate: "2026-02-09",
-      returnDate: "2026-02-12",
-      returned: true,
-    },
-  ]);
+  const fetchLoans = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
 
-  const filtered = loans.filter(
-    (l) =>
-      l.user.toLowerCase().includes(query.toLowerCase()) ||
-      l.book.toLowerCase().includes(query.toLowerCase())
-  );
-
-  const handleDelete = (id: number) => {
-    if (confirm("Delete this loan?")) {
-      setLoans(loans.filter((l) => l.id !== id));
+      if (data.status) {
+        const mapped = data.data.map((l: any) => ({
+          id: l.id,
+          user: l.user?.name || "-",
+          loanDate: formatDate(l.loan_date),
+          returnDate: formatDate(l.return_date),
+          returned: !!l.return_date,
+        }));
+        setLoans(mapped);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleReturn = (id: number) => {
-    setLoans(loans.map((l) => (l.id === id ? { ...l, returned: true } : l)));
-  };
+  useEffect(() => {
+    fetchLoans();
+  }, []);
 
-  const handleEditChange = (e: any) => {
-    setEditingLoan({
-      ...editingLoan,
-      [e.target.name]: e.target.value,
-    });
-  };
+  const filtered = loans.filter((l) =>
+    l.user.toLowerCase().includes(search.toLowerCase())
+  );
 
-  const saveEdit = () => {
-    setLoans(loans.map((l) => (l.id === editingLoan.id ? editingLoan : l)));
-    setEditingLoan(null);
+  const handleDelete = async (id: number) => {
+    if (!confirm("Hapus data pinjaman ini?")) return;
+    try {
+      const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.status) fetchLoans();
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-6 text-white shadow-lg">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="space-y-5">
+      <div className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-slate-900 rounded-2xl p-5 text-white shadow-lg">
+        <div className="flex flex-col lg:flex-row gap-5 lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Loan Management</h1>
-            <p className="text-slate-300 text-sm">Track book loans and returns</p>
+            <h1 className="text-2xl font-bold">Loans</h1>
+            <p className="text-indigo-100 text-sm">Kelola pinjaman buku</p>
           </div>
 
-          <div className="flex gap-3 w-full md:w-auto">
-            <div className="flex bg-white rounded-xl overflow-hidden shadow w-full md:w-72">
+          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+            <div className="flex bg-white rounded-xl overflow-hidden shadow w-full sm:w-72">
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search loan..."
-                className="flex-1 px-4 py-2 text-sm outline-none text-slate-800"
+                placeholder="Cari pinjaman..."
+                className="flex-1 px-4 py-2.5 text-sm outline-none text-slate-800"
               />
-              <div className="px-4 bg-slate-900 text-white flex items-center">
-                <FiSearch />
-              </div>
+              <button
+                onClick={() => setSearch(query)}
+                className="px-4 bg-indigo-600 text-white"
+              >
+                <FiSearch size={16} />
+              </button>
             </div>
 
             <Link href="/admin/loan/create">
-              <button className="flex items-center gap-2 bg-white text-slate-900 px-5 py-2 rounded-xl text-sm font-semibold shadow hover:bg-slate-100 transition">
-                <FiPlus />
-                Add
+              <button className="flex items-center gap-2 bg-white text-indigo-700 px-5 py-2.5 rounded-xl text-sm font-semibold shadow hover:scale-105 transition">
+                <FiPlus size={16} /> Tambah Pinjaman
               </button>
             </Link>
-
           </div>
         </div>
       </div>
 
-      <div className="hidden md:block bg-white rounded-2xl shadow border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-600">
-            <tr>
-              <th className="p-4 text-left">User</th>
-              <th className="p-4 text-left">Book</th>
-              <th className="p-4 text-left">Loan Date</th>
-              <th className="p-4 text-left">Return Date</th>
-              <th className="p-4 text-center">Status</th>
-              <th className="p-4 text-center">Action</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {filtered.map((l) => (
-              <tr key={l.id} className="border-t hover:bg-slate-50">
-                <td className="p-4 font-semibold">{l.user}</td>
-                <td className="p-4">{l.book}</td>
-                <td className="p-4">{l.loanDate}</td>
-                <td className="p-4">{l.returnDate}</td>
-                <td className="p-4 text-center">
-                  {l.returned ? (
-                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs">
-                      Returned
-                    </span>
-                  ) : (
-                    <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs">
-                      Not Returned
-                    </span>
-                  )}
-                </td>
-                <td className="p-4 text-center">
-                  <div className="flex justify-center gap-2">
-                    <button
-                      onClick={() => setSelectedLoan(l)}
-                      className="p-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200"
-                    >
-                      <FiEye size={16} />
-                    </button>
-
-                    <button
-                      onClick={() => setEditingLoan(l)}
-                      className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
-                    >
-                      <FiEdit size={16} />
-                    </button>
-
-                    {!l.returned && (
-                      <button
-                        onClick={() => handleReturn(l.id)}
-                        className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100"
-                      >
-                        <FiCheck size={16} />
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => handleDelete(l.id)}
-                      className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
-                    >
-                      <FiTrash2 size={16} />
-                    </button>
-                  </div>
-                </td>
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-100 text-slate-700">
+              <tr>
+                <th className="p-4 text-center">No</th>
+                <th className="p-4 text-left">User</th>
+                <th className="p-4 text-center">Tanggal Peminjaman</th>
+                <th className="p-4 text-center">Tanggal Pengembalian</th>
+                <th className="p-4 text-center">Status</th>
+                <th className="p-4 text-center">Aksi</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
 
-      {editingLoan && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-[420px] shadow-xl space-y-5">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-bold">Edit Loan</h2>
-              <button onClick={() => setEditingLoan(null)}>
-                <FiX size={20} />
-              </button>
-            </div>
+            <tbody>
+              {loading && (
+                <tr>
+                  <td colSpan={6} className="text-center py-12 text-slate-400">
+                    Memuat data...
+                  </td>
+                </tr>
+              )}
 
-            <div className="space-y-4">
-              <input
-                name="user"
-                value={editingLoan.user}
-                onChange={handleEditChange}
-                className="w-full border rounded-xl px-4 py-3"
-              />
-              <input
-                name="book"
-                value={editingLoan.book}
-                onChange={handleEditChange}
-                className="w-full border rounded-xl px-4 py-3"
-              />
-              <input
-                type="date"
-                name="loanDate"
-                value={editingLoan.loanDate}
-                onChange={handleEditChange}
-                className="w-full border rounded-xl px-4 py-3"
-              />
-              <input
-                type="date"
-                name="returnDate"
-                value={editingLoan.returnDate}
-                onChange={handleEditChange}
-                className="w-full border rounded-xl px-4 py-3"
-              />
-            </div>
+              {!loading &&
+                filtered.map((l, index) => (
+                  <tr key={l.id} className="border-t hover:bg-indigo-50">
+                    <td className="p-4 text-center font-semibold">
+                      {index + 1}
+                    </td>
+                    <td className="p-4 font-semibold">{l.user}</td>
+                    <td className="p-4 text-center">{l.loanDate}</td>
+                    <td className="p-4 text-center">{l.returnDate || "-"}</td>
 
-            <button
-              onClick={saveEdit}
-              className="w-full py-3 bg-slate-900 text-white rounded-xl"
-            >
-              Save Changes
-            </button>
-          </div>
+                    <td className="p-4 text-center">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          l.returned
+                            ? "bg-green-100 text-green-700"
+                            : "bg-yellow-100 text-yellow-700"
+                        }`}
+                      >
+                        {l.returned
+                          ? "Sudah Dikembalikan"
+                          : "Belum Dikembalikan"}
+                      </span>
+                    </td>
+
+                    <td className="p-4 text-center">
+                      <div className="flex justify-center gap-2">
+                        <Link href={`/admin/loan/${l.id}`}>
+                          <button className="p-2 bg-indigo-100 text-indigo-600 rounded-lg hover:bg-indigo-200">
+                            <FiEye size={16} />
+                          </button>
+                        </Link>
+
+                        <Link href={`/admin/loan/${l.id}/edit`}>
+                          <button className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200">
+                            <FiEdit size={16} />
+                          </button>
+                        </Link>
+
+                        <button
+                          onClick={() => handleDelete(l.id)}
+                          className="p թվական p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
+                        >
+                          <FiTrash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
     </div>
   );
 }
