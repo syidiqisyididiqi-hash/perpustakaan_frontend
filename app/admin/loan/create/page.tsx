@@ -1,58 +1,124 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, ChangeEvent, FormEvent, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 const API_URL = "http://127.0.0.1:8000/api/loans";
 const API_USERS = "http://127.0.0.1:8000/api/users";
+const API_BOOKS = "http://127.0.0.1:8000/api/books";
+
+type Detail = {
+  book_id: string;
+  rack_code: string;
+  qty: number;
+};
 
 export default function CreateLoanPage() {
   const router = useRouter();
+
+  const [users, setUsers] = useState<any[]>([]);
+  const [books, setBooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [users, setUsers] = useState<{ id: number; name: string }[]>([]);
 
   const [form, setForm] = useState({
     user_id: "",
     loan_date: "",
     due_date: "",
-    return_date: "",
   });
+
+  const [details, setDetails] = useState<Detail[]>([
+    { book_id: "", rack_code: "", qty: 1 },
+  ]);
 
   useEffect(() => {
     fetchUsers();
+    fetchBooks();
   }, []);
 
   const fetchUsers = async () => {
     try {
       const res = await fetch(API_USERS);
       const data = await res.json();
-      if (data.status) setUsers(data.data);
-    } catch (error) {
-      console.error(error);
+      setUsers(data.data || []);
+    } catch (err) {
+      console.error("Gagal ambil users", err);
     }
   };
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const fetchBooks = async () => {
+    try {
+      const res = await fetch(API_BOOKS);
+      const data = await res.json();
+      setBooks(data.data || []);
+    } catch (err) {
+      console.error("Gagal ambil books", err);
+    }
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  // 🔥 FIX PALING PENTING ADA DI SINI
+  const handleBookChange = (index: number, bookId: string) => {
+    const selectedBook = books.find(
+      (b) => String(b.id) === String(bookId)
+    );
+
+    setDetails((prev) => {
+      const updated = [...prev];
+      updated[index] = {
+        ...updated[index],
+        book_id: bookId,
+        rack_code: selectedBook?.rack_code ?? "",
+      };
+      return updated;
+    });
+  };
+
+  const handleQtyChange = (index: number, value: number) => {
+    setDetails((prev) => {
+      const updated = [...prev];
+      updated[index] = {
+        ...updated[index],
+        qty: value > 0 ? value : 1,
+      };
+      return updated;
+    });
+  };
+
+  const addRow = () =>
+    setDetails([...details, { book_id: "", rack_code: "", qty: 1 }]);
+
+  const removeRow = (index: number) =>
+    setDetails(details.filter((_, i) => i !== index));
+
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
+
+    // 🔥 Validasi tambahan
+    if (!form.user_id || !form.loan_date || !form.due_date) {
+      alert("Lengkapi data utama");
+      return;
+    }
+
+    if (details.some((d) => !d.book_id)) {
+      alert("Pilih semua buku terlebih dahulu");
+      return;
+    }
+
     setLoading(true);
+
     try {
       const res = await fetch(API_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(form),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, details }),
       });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Gagal menambahkan pinjaman");
-      }
-      alert("Pinjaman berhasil ditambahkan!");
+
+      if (!res.ok) throw new Error();
+
+      alert("Pinjaman berhasil!");
       router.push("/admin/loan");
-    } catch (error: any) {
-      alert("Gagal menambahkan pinjaman: " + (error.message || "Unknown error"));
+    } catch (err) {
+      console.error(err);
+      alert("Gagal menyimpan");
     } finally {
       setLoading(false);
     }
@@ -60,53 +126,128 @@ export default function CreateLoanPage() {
 
   return (
     <div className="min-h-screen bg-slate-100 py-10 px-4">
-      <div className="max-w-3xl mx-auto space-y-5">
-        <div className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-slate-900 rounded-2xl p-5 text-white shadow-lg">
+      <div className="max-w-4xl mx-auto space-y-6">
+
+        <div className="bg-gradient-to-r from-indigo-600 to-slate-900 rounded-2xl p-6 text-white shadow-lg">
           <h1 className="text-2xl font-bold">Tambah Pinjaman</h1>
-          <p className="text-indigo-100 text-sm">Tambahkan data pinjaman buku</p>
+          <p className="text-indigo-100 text-sm">
+            Tambahkan data pinjaman buku
+          </p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border p-5">
+        <div className="bg-white rounded-2xl shadow-lg border p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <Section title="Detail Pinjaman">
 
-              <Field label="User">
-                <Select
-                  name="user_id"
-                  value={form.user_id}
-                  onChange={handleChange}
-                  placeholder="Pilih User"
-                  options={users.map((u) => ({ value: u.id, label: u.name }))}
-                />
-              </Field>
+            <div className="grid md:grid-cols-3 gap-5">
+              <select
+                required
+                value={form.user_id}
+                onChange={(e) =>
+                  setForm({ ...form, user_id: e.target.value })
+                }
+                className="w-full px-4 py-2.5 rounded-lg border text-sm"
+              >
+                <option value="">Pilih User</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
 
-              <Field label="Tanggal Pinjam">
-                <Input name="loan_date" type="date" value={form.loan_date} onChange={handleChange} />
-              </Field>
+              <input
+                type="date"
+                required
+                value={form.loan_date}
+                onChange={(e) =>
+                  setForm({ ...form, loan_date: e.target.value })
+                }
+                className="w-full px-4 py-2.5 rounded-lg border text-sm"
+              />
 
-              <Field label="Tanggal Jatuh Tempo">
-                <Input name="due_date" type="date" value={form.due_date} onChange={handleChange} />
-              </Field>
+              <input
+                type="date"
+                required
+                value={form.due_date}
+                onChange={(e) =>
+                  setForm({ ...form, due_date: e.target.value })
+                }
+                className="w-full px-4 py-2.5 rounded-lg border text-sm"
+              />
+            </div>
 
-              <Field label="Tanggal Dikembalikan">
-                <Input name="return_date" type="date" value={form.return_date} onChange={handleChange} />
-              </Field>
+            <div className="space-y-4">
+              <h2 className="font-semibold text-slate-700 border-b pb-2">
+                Daftar Buku
+              </h2>
 
-            </Section>
+              {details.map((d, i) => (
+                <div key={i} className="grid md:grid-cols-4 gap-4">
+
+                  <select
+                    required
+                    value={d.book_id}
+                    onChange={(e) =>
+                      handleBookChange(i, e.target.value)
+                    }
+                    className="w-full px-4 py-2.5 rounded-lg border text-sm"
+                  >
+                    <option value="">Pilih Buku</option>
+                    {books.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.title}
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    value={d.rack_code}
+                    readOnly
+                    className="w-full px-4 py-2.5 rounded-lg border text-sm bg-gray-100"
+                  />
+
+                  <input
+                    type="number"
+                    min="1"
+                    value={d.qty}
+                    onChange={(e) =>
+                      handleQtyChange(i, Number(e.target.value))
+                    }
+                    className="w-full px-4 py-2.5 rounded-lg border text-sm"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => removeRow(i)}
+                    className="bg-red-500 text-white rounded-lg"
+                  >
+                    Hapus
+                  </button>
+
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={addRow}
+                className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl"
+              >
+                Tambah Buku
+              </button>
+            </div>
 
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="flex-1 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition"
+                className="w-full border py-3 rounded-xl"
               >
                 Batal
               </button>
 
               <button
-                type="submit"
                 disabled={loading}
-                className="flex-1 bg-indigo-600 text-white py-2.5 rounded-xl font-semibold shadow hover:bg-indigo-700 transition"
+                className="w-full bg-indigo-600 text-white py-3 rounded-xl"
               >
                 {loading ? "Menyimpan..." : "Simpan Pinjaman"}
               </button>
@@ -116,55 +257,5 @@ export default function CreateLoanPage() {
         </div>
       </div>
     </div>
-  );
-}
-
-function Section({ title, children }: any) {
-  return (
-    <div className="space-y-4">
-      <h2 className="font-semibold text-slate-700 border-b pb-2">{title}</h2>
-      {children}
-    </div>
-  );
-}
-
-function Field({ label, children }: any) {
-  return (
-    <div className="space-y-1">
-      <label className="text-sm font-semibold text-slate-700">{label}</label>
-      {children}
-    </div>
-  );
-}
-
-function Input({ name, onChange, value, type = "text" }: any) {
-  return (
-    <input
-      name={name}
-      type={type}
-      value={value}
-      onChange={onChange}
-      required
-      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-    />
-  );
-}
-
-function Select({ name, onChange, value, options, placeholder }: any) {
-  return (
-    <select
-      name={name}
-      value={value}
-      onChange={onChange}
-      required
-      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-    >
-      <option value="">{placeholder}</option>
-      {options.map((opt: any) => (
-        <option key={opt.value} value={opt.value}>
-          {opt.label}
-        </option>
-      ))}
-    </select>
   );
 }

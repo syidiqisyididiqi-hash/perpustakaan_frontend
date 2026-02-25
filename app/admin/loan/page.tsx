@@ -12,6 +12,7 @@ type Loan = {
   loanDate: string;
   returnDate: string;
   returned: boolean;
+  books: string;
 };
 
 const formatDate = (dateString: string) => {
@@ -38,7 +39,18 @@ export default function LoanPage() {
           loanDate: formatDate(l.loan_date),
           returnDate: formatDate(l.return_date),
           returned: !!l.return_date,
+
+          books:
+            l.loan_details?.length > 0
+              ? l.loan_details
+                  .map(
+                    (d: any) =>
+                      `${d.book?.title || "-"} | Rak: ${d.rack_code} | Qty: ${d.qty}`
+                  )
+                  .join("\n")
+              : "-",
         }));
+
         setLoans(mapped);
       }
     } catch (error) {
@@ -58,8 +70,12 @@ export default function LoanPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Hapus data pinjaman ini?")) return;
+
     try {
-      const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+      const res = await fetch(`${API_URL}/${id}`, {
+        method: "DELETE",
+      });
+
       const data = await res.json();
       if (data.status) fetchLoans();
     } catch (error) {
@@ -73,7 +89,9 @@ export default function LoanPage() {
         <div className="flex flex-col lg:flex-row gap-5 lg:items-center lg:justify-between">
           <div>
             <h1 className="text-2xl font-bold">Loans</h1>
-            <p className="text-indigo-100 text-sm">Kelola pinjaman buku</p>
+            <p className="text-indigo-100 text-sm">
+              Kelola pinjaman buku
+            </p>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
@@ -81,7 +99,7 @@ export default function LoanPage() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Cari pinjaman..."
+                placeholder="Cari user..."
                 className="flex-1 px-4 py-2.5 text-sm outline-none text-slate-800"
               />
               <button
@@ -108,8 +126,13 @@ export default function LoanPage() {
               <tr>
                 <th className="p-4 text-center">No</th>
                 <th className="p-4 text-left">User</th>
-                <th className="p-4 text-center">Tanggal Peminjaman</th>
-                <th className="p-4 text-center">Tanggal Pengembalian</th>
+                <th className="p-4 text-left">Buku Dipinjam</th>
+                <th className="p-4 text-center">
+                  Tanggal Peminjaman
+                </th>
+                <th className="p-4 text-center">
+                  Tanggal Pengembalian
+                </th>
                 <th className="p-4 text-center">Status</th>
                 <th className="p-4 text-center">Aksi</th>
               </tr>
@@ -118,7 +141,7 @@ export default function LoanPage() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-slate-400">
+                  <td colSpan={7} className="text-center py-12 text-slate-400">
                     Memuat data...
                   </td>
                 </tr>
@@ -130,9 +153,16 @@ export default function LoanPage() {
                     <td className="p-4 text-center font-semibold">
                       {index + 1}
                     </td>
+
                     <td className="p-4 font-semibold">{l.user}</td>
+
+                    <td className="p-4 whitespace-pre-line">
+                      {l.books}
+                    </td>
+
                     <td className="p-4 text-center">{l.loanDate}</td>
-                    <td className="p-4 text-center">{l.returnDate || "-"}</td>
+
+                    <td className="p-4 text-center">{l.returnDate}</td>
 
                     <td className="p-4 text-center">
                       <span
@@ -164,7 +194,7 @@ export default function LoanPage() {
 
                         <button
                           onClick={() => handleDelete(l.id)}
-                          className="p թվական p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
+                          className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
                         >
                           <FiTrash2 size={16} />
                         </button>
@@ -172,6 +202,14 @@ export default function LoanPage() {
                     </td>
                   </tr>
                 ))}
+
+              {!loading && filtered.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="text-center py-12 text-slate-400">
+                    Data tidak ditemukan
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
