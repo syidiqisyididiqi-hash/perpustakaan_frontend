@@ -1,141 +1,186 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, ChangeEvent, FormEvent } from "react";
+
+const API_FINE = "http://127.0.0.1:8000/api/fines";
+const API_LOAN = "http://127.0.0.1:8000/api/loans";
 
 export default function CreateFinePage() {
   const router = useRouter();
-
-  const users = [
-    { id: 1, name: "John Doe" },
-    { id: 2, name: "Sarah Smith" },
-    { id: 3, name: "Michael Jordan" },
-  ];
-
-  const books = [
-    { id: 1, title: "Clean Code", finePerDay: 5000 },
-    { id: 2, title: "Atomic Habits", finePerDay: 3000 },
-    { id: 3, title: "Design Patterns", finePerDay: 4000 },
-  ];
+  const [loading, setLoading] = useState(false);
+  const [loans, setLoans] = useState<any[]>([]);
 
   const [form, setForm] = useState({
-    user_id: "",
-    book_id: "",
-    days: "",
-    amount: "",
+    loan_id: "",
+    rack_code: "",
+    overdue_days: "0",
+    total_fine: "0",
   });
 
   useEffect(() => {
-    const selectedBook = books.find((b) => b.id.toString() === form.book_id);
-    if (selectedBook && form.days) {
-      setForm((prev) => ({
-        ...prev,
-        amount: (selectedBook.finePerDay * Number(prev.days)).toString(),
-      }));
-    } else {
-      setForm((prev) => ({ ...prev, amount: "" }));
-    }
-  }, [form.book_id, form.days]);
+    fetchLoans();
+  }, []);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
+  const fetchLoans = async () => {
+    try {
+      const res = await fetch(API_LOAN);
+      const data = await res.json();
+      if (data.status) setLoans(data.data);
+    } catch (err) {
+      console.error("Failed to fetch loans", err);
+    }
+  };
+
+  useEffect(() => {
+    if (!form.loan_id) return;
+
+    const loan = loans.find((l) => l.id.toString() === form.loan_id);
+    if (!loan) return;
+
+    const rack = loan.loan_details?.[0]?.book?.rack_code || "-";
+    let lateDays = 0;
+
+    if (loan.return_date) {
+      const today = new Date();
+      const due = new Date(loan.return_date);
+      if (today > due) {
+        const diffTime = Math.abs(today.getTime() - due.getTime());
+        lateDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      }
+    }
+
+    const finePerDay = 5000;
+    const total = lateDays * finePerDay;
+
+    setForm((prev) => ({
+      ...prev,
+      rack_code: rack,
+      overdue_days: lateDays.toString(),
+      total_fine: total.toString(),
+    }));
+  }, [form.loan_id, loans]);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("DATA FINE:", form);
-    router.push("/admin/fine");
+    setLoading(true);
+
+    try {
+      const payload = {
+        loan_id: parseInt(form.loan_id),
+        overdue_days: parseInt(form.overdue_days),
+        total_fine: parseFloat(form.total_fine),
+        status: "unpaid",
+      };
+
+      const res = await fetch(API_FINE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Gagal menyimpan denda");
+
+      router.push("/admin/fine");
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4">
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <h1 className="text-2xl font-semibold text-slate-800 mb-2">
-          Tambah Fine
-        </h1>
+    <div className="min-h-screen bg-slate-100 py-10 px-4">
+      <div className="max-w-3xl mx-auto space-y-5">
+        <div className="bg-gradient-to-r from-red-600 via-red-700 to-slate-900 rounded-2xl p-5 text-white shadow-lg">
+          <h1 className="text-2xl font-bold">Tambah Denda</h1>
+          <p className="text-red-100 text-sm">Data otomatis dihitung dari loan</p>
+        </div>
 
-        <p className="text-slate-500 text-sm mb-6">
-          Isi data lengkap untuk menambahkan denda baru
-        </p>
+        <div className="bg-white rounded-2xl shadow-lg border p-5">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <Section title="Pilih Loan">
+              <Select
+                name="loan_id"
+                value={form.loan_id}
+                onChange={handleChange}
+                options={loans}
+                placeholder="Pilih Loan"
+              />
+            </Section>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-700">Pilih User</label>
-            <select
-              name="user_id"
-              value={form.user_id}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-1 focus:ring-slate-300 outline-none"
-            >
-              <option value="">-- Pilih User --</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
-          </div>
+            <Section title="Informasi Otomatis">
+              <Input readOnly value={form.rack_code} placeholder="Rack" />
+              <Input readOnly value={form.overdue_days} placeholder="Hari Telat" />
+              <Input
+                readOnly
+                value={form.total_fine ? `Rp ${Number(form.total_fine).toLocaleString("id-ID")}` : "Rp 0"}
+                placeholder="Total Denda"
+              />
+            </Section>
 
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-700">Pilih Buku</label>
-            <select
-              name="book_id"
-              value={form.book_id}
-              onChange={handleChange}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-1 focus:ring-slate-300 outline-none"
-            >
-              <option value="">-- Pilih Buku --</option>
-              {books.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.title} (Rp {b.finePerDay}/hari)
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-700">Days Late</label>
-            <input
-              type="number"
-              name="days"
-              value={form.days}
-              onChange={handleChange}
-              placeholder="Jumlah hari terlambat"
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-1 focus:ring-slate-300 outline-none"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-700">Jumlah Denda</label>
-            <input
-              type="text"
-              name="amount"
-              value={form.amount ? `Rp ${Number(form.amount).toLocaleString()}` : ""}
-              readOnly
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-gray-50 outline-none"
-            />
-          </div>
-
-          <div className="flex gap-3 pt-3">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="flex-1 py-2.5 rounded-lg border border-gray-200 text-sm font-medium hover:bg-slate-50 transition"
-            >
-              Batal
-            </button>
-
-            <button
-              type="submit"
-              className="flex-1 bg-slate-900 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-700 shadow-sm transition"
-            >
-              Simpan
-            </button>
-          </div>
-        </form>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="flex-1 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={loading || !form.loan_id}
+                className="flex-1 bg-red-600 text-white py-2.5 rounded-xl font-semibold shadow hover:bg-red-700 disabled:bg-slate-400"
+              >
+                {loading ? "Menyimpan..." : "Simpan Denda"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
+  );
+}
+
+function Section({ title, children }: any) {
+  return (
+    <div className="space-y-4">
+      <h2 className="font-semibold text-slate-700 border-b pb-2">{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+function Input({ type = "text", ...props }: any) {
+  return (
+    <input
+      type={type}
+      {...props}
+      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm bg-slate-50 outline-none"
+    />
+  );
+}
+
+function Select({ name, value, onChange, options, placeholder }: any) {
+  return (
+    <select
+      name={name}
+      value={value}
+      onChange={onChange}
+      required
+      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-red-500 outline-none"
+    >
+      <option value="">-- {placeholder} --</option>
+      {options.map((opt: any) => (
+        <option key={opt.id} value={opt.id}>
+          Loan #{opt.id} — {opt.user?.name}
+        </option>
+      ))}
+    </select>
   );
 }
