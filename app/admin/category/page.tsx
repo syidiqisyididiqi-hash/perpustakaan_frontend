@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { FiSearch, FiEdit, FiTrash2, FiPlus } from "react-icons/fi";
 import Link from "next/link";
-
+import { Alert } from "@/app/lib/alert";
 const API_URL = "http://127.0.0.1:8000/api/categories";
 
 type Category = {
@@ -35,13 +35,25 @@ export default function CategoryPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Hapus kategori ini?")) return;
+    const handleDelete = async (id: number) => {
+    const confirm = await Alert.confirmDelete();
+
+    if (!confirm.isConfirmed) return;
+
     try {
-      await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+      const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        Alert.error(data.message || "Gagal menghapus kategori");
+        return;
+      }
+
+      await Alert.success("Kategori berhasil dihapus");
+
       fetchCategories();
     } catch {
-      alert("Gagal menghapus kategori");
+      Alert.error("Terjadi kesalahan server");
     }
   };
 
