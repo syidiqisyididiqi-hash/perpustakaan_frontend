@@ -60,7 +60,7 @@ export default function CategoryPage() {
           <div>
             <h1 className="text-2xl font-bold">Kategori</h1>
             <p className="text-indigo-100 text-sm">
-              Mengelola kategori buku sistem perpustakaan
+              Kelola kategori buku perpustakaan
             </p>
           </div>
 
@@ -75,7 +75,7 @@ export default function CategoryPage() {
               />
               <button
                 onClick={() => setSearch(query)}
-                className="px-4 bg-indigo-600 text-white hover:bg-indigo-700 transition"
+                className="px-4 bg-indigo-600 text-white"
               >
                 <FiSearch size={16} />
               </button>
@@ -94,14 +94,18 @@ export default function CategoryPage() {
       <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
+
             <thead className="bg-slate-100 text-slate-700">
               <tr>
-                <th className="p-4 text-left">Nama Kategori</th>
+                <th className="p-4 text-center">No</th>
+                <th className="p-4 text-left">Nama</th>
                 <th className="p-4 text-left">Deskripsi</th>
                 <th className="p-4 text-center">Aksi</th>
               </tr>
             </thead>
+
             <tbody>
+
               {loading && (
                 <tr>
                   <td colSpan={4} className="text-center py-12 text-slate-400">
@@ -111,67 +115,54 @@ export default function CategoryPage() {
               )}
 
               {!loading &&
-                filtered.map((c, i) => (
-                  <tr
-                    key={c.id}
-                    className={`border-t hover:bg-indigo-50 ${i % 2 === 0 ? "bg-white" : "bg-slate-50"}`}
-                  >
-                    <td className="p-4 font-semibold text-slate-800">{c.name}</td>
-                    <td className="p-4 text-slate-600">{c.description || "-"}</td>
-                    
+                filtered.map((c, index) => (
+                  <tr key={c.id} className="border-t hover:bg-indigo-50">
+
+                    <td className="p-4 text-center font-semibold">
+                      {index + 1}
+                    </td>
+
+                    <td className="p-4 font-semibold text-slate-800">
+                      {c.name}
+                    </td>
+
+                    <td className="p-4 text-slate-600">
+                      {c.description || "-"}
+                    </td>
+
                     <td className="p-4 text-center">
                       <div className="flex justify-center gap-2">
+
                         <Link href={`/admin/category/${c.id}/edit`}>
-                          <button className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition">
+                          <button className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200">
                             <FiEdit size={16} />
                           </button>
                         </Link>
+
                         <button
                           onClick={() => handleDelete(c.id)}
-                          className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition"
+                          className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
                         >
                           <FiTrash2 size={16} />
                         </button>
+
                       </div>
                     </td>
+
                   </tr>
                 ))}
 
               {!loading && filtered.length === 0 && (
                 <tr>
                   <td colSpan={4} className="text-center py-12 text-slate-400">
-                    Tidak ada kategori
+                    Data tidak ditemukan
                   </td>
                 </tr>
               )}
+
             </tbody>
           </table>
         </div>
-      </div>
-
-      <div className="md:hidden space-y-3">
-        {filtered.map((c) => (
-          <div key={c.id} className="bg-white rounded-2xl p-4 shadow border space-y-2">
-            <p className="font-semibold text-slate-800">{c.name}</p>
-            <p className="text-sm text-slate-600">{c.description || "-"}</p>
-            <div className="flex justify-between text-sm items-center">
-            
-              <div className="flex gap-2">
-                <Link href={`/admin/category/${c.id}/edit`}>
-                  <button className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition">
-                    Edit
-                  </button>
-                </Link>
-                <button
-                  onClick={() => handleDelete(c.id)}
-                  className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
       </div>
 
     </div>
