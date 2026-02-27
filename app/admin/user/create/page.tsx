@@ -12,6 +12,8 @@ import {
   FiEye,
   FiEyeOff,
 } from "react-icons/fi";
+import { LoadingCard } from "../../components/LoadingCard";
+import { Alert } from "@/app/lib/alert"; 
 
 const API_URL = "http://127.0.0.1:8000/api/users";
 
@@ -39,8 +41,12 @@ export default function CreateUserPage() {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setLoading(true);
+
     try {
-      setLoading(true);
+      const payload = Object.fromEntries(
+        Object.entries(form).map(([k, v]) => [k, v === "" ? null : v])
+      );
 
       const res = await fetch(API_URL, {
         method: "POST",
@@ -48,24 +54,33 @@ export default function CreateUserPage() {
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error();
+      const data = await res.json();
+
+      if (!res.ok) {
+        await Alert.error(
+          Object.values(data.errors || {}).flat().join("\n")
+        );
+        return;
+      }
+
+      await Alert.success("User berhasil ditambahkan");
 
       router.push("/admin/user");
     } catch {
-      alert("Gagal menambahkan user");
+      Alert.error("Gagal menambahkan user");
     } finally {
       setLoading(false);
     }
   };
 
+  if (loading) return <LoadingCard />;
+
   return (
     <div className="min-h-screen bg-slate-100 py-10 px-4">
       <div className="max-w-4xl mx-auto space-y-6">
-
-        {/* HEADER */}
         <div className="bg-gradient-to-r from-indigo-600 to-slate-900 rounded-2xl p-6 text-white shadow-lg">
           <h1 className="text-2xl font-bold">Tambah User</h1>
           <p className="text-indigo-100 text-sm">
@@ -73,15 +88,12 @@ export default function CreateUserPage() {
           </p>
         </div>
 
-        {/* FORM CARD */}
         <div className="bg-white rounded-2xl shadow-lg border p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-
-            {/* BASIC INFO */}
             <Section title="Informasi Dasar">
               <div className="grid md:grid-cols-2 gap-5">
-                <Input icon={<FiUser />} name="name" placeholder="Nama Lengkap" onChange={handleChange} />
-                <Input icon={<FiMail />} name="email" placeholder="Email" onChange={handleChange} />
+                <Input icon={<FiUser />} name="name" placeholder="Nama Lengkap" onChange={handleChange} required />
+                <Input icon={<FiMail />} name="email" placeholder="Email" onChange={handleChange} required />
                 <Input icon={<FiHash />} name="member_number" placeholder="Nomor Anggota" onChange={handleChange} />
                 <Input icon={<FiPhone />} name="phone" placeholder="No Telepon" onChange={handleChange} />
               </div>
@@ -89,7 +101,6 @@ export default function CreateUserPage() {
               <InputArea icon={<FiMapPin />} name="address" placeholder="Alamat Lengkap" onChange={handleChange} />
             </Section>
 
-            {/* ACCOUNT */}
             <Section title="Akun & Akses">
               <div className="grid md:grid-cols-3 gap-5">
                 <div className="relative">
@@ -99,6 +110,7 @@ export default function CreateUserPage() {
                     type={showPass ? "text" : "password"}
                     placeholder="Password"
                     onChange={handleChange}
+                    required
                   />
                   <button
                     type="button"
@@ -109,23 +121,12 @@ export default function CreateUserPage() {
                   </button>
                 </div>
 
-                <Select
-                  name="role"
-                  options={["admin", "staff", "member"]}
-                  onChange={handleChange}
-                />
-
-                <Select
-                  name="status"
-                  options={["active", "inactive"]}
-                  onChange={handleChange}
-                />
+                <Select name="role" options={["admin", "member"]} onChange={handleChange} value={form.role} />
+                <Select name="status" options={["active", "inactive"]} onChange={handleChange} value={form.status} />
               </div>
             </Section>
 
-            {/* BUTTONS */}
             <div className="flex gap-3">
-              {/* CANCEL BUTTON */}
               <button
                 type="button"
                 onClick={() => router.push("/admin/user")}
@@ -134,7 +135,6 @@ export default function CreateUserPage() {
                 Batal
               </button>
 
-              {/* SAVE BUTTON */}
               <button
                 disabled={loading}
                 className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold shadow hover:bg-indigo-700 transition flex justify-center items-center gap-2"
@@ -145,16 +145,12 @@ export default function CreateUserPage() {
                 {loading ? "Menyimpan..." : "Simpan User"}
               </button>
             </div>
-
           </form>
         </div>
       </div>
     </div>
   );
 }
-
-/* ---------- COMPONENTS ---------- */
-
 function Section({ title, children }: any) {
   return (
     <div className="space-y-4">
@@ -164,7 +160,7 @@ function Section({ title, children }: any) {
   );
 }
 
-function Input({ icon, name, onChange, type = "text", placeholder }: any) {
+function Input({ icon, name, onChange, type = "text", placeholder, required = false }: any) {
   return (
     <div className="relative">
       <div className="absolute left-3 top-3 text-slate-400">{icon}</div>
@@ -173,7 +169,7 @@ function Input({ icon, name, onChange, type = "text", placeholder }: any) {
         type={type}
         placeholder={placeholder}
         onChange={onChange}
-        required
+        required={required}
         className="w-full pl-10 pr-3 py-2.5 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
       />
     </div>
@@ -194,15 +190,16 @@ function InputArea({ icon, name, onChange, placeholder }: any) {
   );
 }
 
-function Select({ name, options, onChange }: any) {
+function Select({ name, options, onChange, value }: any) {
   return (
     <select
       name={name}
       onChange={onChange}
+      value={value}
       className="w-full px-3 py-2.5 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
     >
       {options.map((o: string) => (
-        <option key={o}>{o}</option>
+        <option key={o} value={o}>{o}</option>
       ))}
     </select>
   );

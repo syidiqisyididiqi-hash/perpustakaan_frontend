@@ -1,7 +1,10 @@
 "use client";
 
+import { LoadingCard } from "@/app/admin/components/LoadingCard";
+import { Alert } from "@/app/lib/alert";
 import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect, ChangeEvent, FormEvent } from "react";
+
 import {
   FiUser,
   FiMail,
@@ -18,7 +21,7 @@ const API_URL = "http://127.0.0.1:8000/api/users";
 export default function EditUserPage() {
   const router = useRouter();
   const params = useParams();
-  const id = params.id;
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
@@ -43,22 +46,19 @@ export default function EditUserPage() {
   const fetchUser = async () => {
     try {
       const res = await fetch(`${API_URL}/${id}`);
-      if (!res.ok) throw new Error("Network error");
       const data = await res.json();
-      const user = data?.data ?? data?.user ?? data;
+      const user = data.data ?? data;
 
       setForm({
-        name: user?.name ?? "",
-        email: user?.email ?? "",
-        role: (user?.role ?? "member").toLowerCase(),
-        status: (user?.status ?? "active").toLowerCase(),
-        member_number: user?.member_number ?? "",
-        phone: user?.phone ?? "",
-        address: user?.address ?? "",
+        name: user.name ?? "",
+        email: user.email ?? "",
+        role: user.role ?? "member",
+        status: user.status ?? "active",
+        member_number: user.member_number ?? "",
+        phone: user.phone ?? "",
+        address: user.address ?? "",
         password: "",
       });
-    } catch {
-      alert("Gagal mengambil data user");
     } finally {
       setPageLoading(false);
     }
@@ -72,40 +72,42 @@ export default function EditUserPage() {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    try {
-      setLoading(true);
+    setLoading(true);
 
-      const payload: any = { ...form };
+    try {
+      const payload: any = Object.fromEntries(
+        Object.entries(form).map(([k, v]) => [k, v === "" ? null : v])
+      );
+
       if (!payload.password) delete payload.password;
 
       const res = await fetch(`${API_URL}/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
         body: JSON.stringify(payload),
       });
 
       if (!res.ok) throw new Error();
 
+      await Alert.success("Data user berhasil diperbarui");
+
       router.push("/admin/user");
     } catch {
-      alert("Gagal update user");
+      Alert.error("Gagal update user");
     } finally {
       setLoading(false);
     }
   };
 
-  if (pageLoading)
-    return (
-      <div className="h-screen flex items-center justify-center text-slate-500">
-        Loading...
-      </div>
-    );
+  if (pageLoading) return <LoadingCard />;
 
   return (
     <div className="min-h-screen bg-slate-100 py-10 px-4">
       <div className="max-w-4xl mx-auto space-y-6">
 
-        {/* HEADER */}
         <div className="bg-gradient-to-r from-indigo-600 to-slate-900 rounded-2xl p-6 text-white shadow-lg">
           <h1 className="text-2xl font-bold">Edit User</h1>
           <p className="text-indigo-100 text-sm">
@@ -113,32 +115,29 @@ export default function EditUserPage() {
           </p>
         </div>
 
-        {/* FORM CARD */}
         <div className="bg-white rounded-2xl shadow-lg border p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
 
-            {/* BASIC INFO */}
             <Section title="Informasi Dasar">
               <div className="grid md:grid-cols-2 gap-5">
-                <Input icon={<FiUser />} name="name" value={form.name} onChange={handleChange} placeholder="Nama Lengkap" />
-                <Input icon={<FiMail />} name="email" value={form.email} onChange={handleChange} placeholder="Email" />
-                <Input icon={<FiHash />} name="member_number" value={form.member_number} onChange={handleChange} placeholder="Nomor Anggota" />
-                <Input icon={<FiPhone />} name="phone" value={form.phone} onChange={handleChange} placeholder="No Telepon" />
+                <Input icon={<FiUser />} name="name" value={form.name} onChange={handleChange} />
+                <Input icon={<FiMail />} name="email" value={form.email} onChange={handleChange} />
+                <Input icon={<FiHash />} name="member_number" value={form.member_number} onChange={handleChange} />
+                <Input icon={<FiPhone />} name="phone" value={form.phone} onChange={handleChange} />
               </div>
 
-              <InputArea icon={<FiMapPin />} name="address" value={form.address} onChange={handleChange} placeholder="Alamat Lengkap" />
+              <InputArea icon={<FiMapPin />} name="address" value={form.address} onChange={handleChange} />
             </Section>
 
-            {/* ACCOUNT */}
             <Section title="Akun & Akses">
               <div className="grid md:grid-cols-3 gap-5">
+
                 <div className="relative">
                   <Input
                     icon={<FiLock />}
                     name="password"
                     type={showPass ? "text" : "password"}
                     value={form.password}
-                    placeholder="Password Baru"
                     onChange={handleChange}
                   />
                   <button
@@ -150,39 +149,38 @@ export default function EditUserPage() {
                   </button>
                 </div>
 
-                <Select name="role" value={form.role} options={["admin","staff","member"]} onChange={handleChange} />
-                <Select name="status" value={form.status} options={["active","inactive"]} onChange={handleChange} />
+                <Select name="role" value={form.role} options={["admin", "member"]} onChange={handleChange} />
+                <Select name="status" value={form.status} options={["active", "inactive"]} onChange={handleChange} />
+
               </div>
             </Section>
 
-            {/* BUTTONS */}
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => router.back()}
-                className="flex-1 border border-slate-300 py-3 rounded-xl font-semibold text-slate-700 hover:bg-slate-100 transition"
+                onClick={() => router.push("/admin/user")}
+                className="w-full border border-slate-300 text-slate-700 py-3 rounded-xl font-semibold hover:bg-slate-100 transition"
               >
                 Batal
               </button>
 
               <button
                 disabled={loading}
-                className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-semibold shadow hover:bg-indigo-700 transition flex justify-center items-center gap-2"
+                className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold shadow hover:bg-indigo-700 transition flex justify-center items-center gap-2"
               >
-                {loading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                {loading && (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                )}
                 {loading ? "Menyimpan..." : "Update User"}
               </button>
             </div>
 
           </form>
         </div>
-
       </div>
     </div>
   );
 }
-
-/* ---------- COMPONENTS ---------- */
 
 function Section({ title, children }: any) {
   return (
@@ -193,7 +191,7 @@ function Section({ title, children }: any) {
   );
 }
 
-function Input({ icon, name, value, onChange, type = "text", placeholder }: any) {
+function Input({ icon, name, value, onChange, type = "text" }: any) {
   return (
     <div className="relative">
       <div className="absolute left-3 top-3 text-slate-400">{icon}</div>
@@ -202,14 +200,13 @@ function Input({ icon, name, value, onChange, type = "text", placeholder }: any)
         type={type}
         value={value}
         onChange={onChange}
-        placeholder={placeholder}
         className="w-full pl-10 pr-3 py-2.5 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
       />
     </div>
   );
 }
 
-function InputArea({ icon, name, value, onChange, placeholder }: any) {
+function InputArea({ icon, name, value, onChange }: any) {
   return (
     <div className="relative">
       <div className="absolute left-3 top-3 text-slate-400">{icon}</div>
@@ -217,7 +214,6 @@ function InputArea({ icon, name, value, onChange, placeholder }: any) {
         name={name}
         value={value}
         onChange={onChange}
-        placeholder={placeholder}
         className="w-full pl-10 pr-3 py-2.5 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
       />
     </div>
