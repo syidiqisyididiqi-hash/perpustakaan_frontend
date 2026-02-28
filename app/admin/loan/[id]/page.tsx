@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { LoansAPI } from "@/app/lib/api/loans";
 import { LoadingCard } from "../../components/LoadingCard";
 
+const API_URL = "http://127.0.0.1:8000/api/loans";
 
 export default function LoanDetailPage() {
   const { id } = useParams();

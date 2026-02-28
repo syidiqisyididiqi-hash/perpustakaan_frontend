@@ -3,11 +3,12 @@
 import { useRouter, useParams } from "next/navigation";
 import { useState, ChangeEvent, FormEvent, useEffect } from "react";
 import { FiUser, FiCalendar } from "react-icons/fi";
-
 import { LoansAPI } from "@/app/lib/api/loans";
 import { UsersAPI } from "@/app/lib/api/users";
 import { LoadingCard } from "@/app/admin/components/LoadingCard";
 import { Alert } from "@/app/lib/alert";
+
+const API_URL = "http://127.0.0.1:8000/api/loans";
 
 type User = {
   id: number;

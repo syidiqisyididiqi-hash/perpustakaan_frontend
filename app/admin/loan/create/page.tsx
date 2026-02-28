@@ -8,6 +8,7 @@ import { BooksAPI } from "@/app/lib/api/book";
 import { LoadingCard } from "../../components/LoadingCard";
 import { Alert } from "@/app/lib/alert";
 
+const API_URL = "http://127.0.0.1:8000/api/loans";
 
 type Detail = {
   book_id: string;

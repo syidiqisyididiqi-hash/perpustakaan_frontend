@@ -6,6 +6,7 @@ import { FiSearch, FiEdit, FiTrash2, FiPlus, FiEye } from "react-icons/fi";
 import { LoansAPI } from "@/app/lib/api/loans";
 import { Alert } from "@/app/lib/alert";
 
+const API_URL = "http://127.0.0.1:8000/api/loans";
 
 type Loan = {
   id: number;
