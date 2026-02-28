@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { LoansAPI } from "@/app/lib/api/loans";
+import { LoadingCard } from "../../components/LoadingCard";
 
-const API_URL = "http://127.0.0.1:8000/api/loans";
 
 export default function LoanDetailPage() {
   const { id } = useParams();
@@ -19,9 +20,7 @@ export default function LoanDetailPage() {
 
   const fetchLoan = async () => {
     try {
-      const res = await fetch(`${API_URL}/${id}`);
-      const data = await res.json();
-
+      const data: any = await LoansAPI.getById(Number(id));
       if (data.status) {
         setLoan(data.data);
       }
@@ -35,11 +34,7 @@ export default function LoanDetailPage() {
   }, [id]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-slate-400">
-        Loading...
-      </div>
-    );
+    return <LoadingCard />;
   }
 
   if (!loan) {

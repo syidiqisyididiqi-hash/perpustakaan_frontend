@@ -2,10 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { LoansAPI } from "@/app/lib/api/loans";
+import { UsersAPI } from "@/app/lib/api/users";
+import { BooksAPI } from "@/app/lib/api/book";
+import { LoadingCard } from "../../components/LoadingCard";
+import { Alert } from "@/app/lib/alert";
 
-const API_URL = "http://127.0.0.1:8000/api/loans";
-const API_USERS = "http://127.0.0.1:8000/api/users";
-const API_BOOKS = "http://127.0.0.1:8000/api/books";
 
 type Detail = {
   book_id: string;
@@ -13,11 +15,22 @@ type Detail = {
   qty: number;
 };
 
+type User = {
+  id: number;
+  name: string;
+};
+
+type Book = {
+  id: number;
+  title: string;
+  rack_code: string;
+};
+
 export default function CreateLoanPage() {
   const router = useRouter();
 
-  const [users, setUsers] = useState<any[]>([]);
-  const [books, setBooks] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [form, setForm] = useState({
@@ -35,94 +48,107 @@ export default function CreateLoanPage() {
     fetchBooks();
   }, []);
 
+
   const fetchUsers = async () => {
     try {
-      const res = await fetch(API_USERS);
-      const data = await res.json();
+      const data: any = await UsersAPI.getAll();
       setUsers(data.data || []);
     } catch (err) {
-      console.error("Gagal ambil users", err);
+      Alert.error("Gagal mengambil data user");
     }
   };
 
   const fetchBooks = async () => {
     try {
-      const res = await fetch(API_BOOKS);
-      const data = await res.json();
+      const data: any = await BooksAPI.getAll();
       setBooks(data.data || []);
     } catch (err) {
-      console.error("Gagal ambil books", err);
+      alert("Gagal mengambil data buku");
     }
   };
 
-  // 🔥 FIX PALING PENTING ADA DI SINI
   const handleBookChange = (index: number, bookId: string) => {
-    const selectedBook = books.find(
-      (b) => String(b.id) === String(bookId)
-    );
+    const selectedBook = books.find((b) => String(b.id) === bookId);
 
-    setDetails((prev) => {
-      const updated = [...prev];
-      updated[index] = {
-        ...updated[index],
-        book_id: bookId,
-        rack_code: selectedBook?.rack_code ?? "",
-      };
-      return updated;
-    });
+    setDetails((prev) =>
+      prev.map((item, i) =>
+        i === index
+          ? {
+              ...item,
+              book_id: bookId,
+              rack_code: selectedBook?.rack_code ?? "",
+            }
+          : item
+      )
+    );
   };
 
   const handleQtyChange = (index: number, value: number) => {
-    setDetails((prev) => {
-      const updated = [...prev];
-      updated[index] = {
-        ...updated[index],
-        qty: value > 0 ? value : 1,
-      };
-      return updated;
-    });
+    setDetails((prev) =>
+      prev.map((item, i) =>
+        i === index
+          ? { ...item, qty: value > 0 ? value : 1 }
+          : item
+      )
+    );
   };
 
-  const addRow = () =>
-    setDetails([...details, { book_id: "", rack_code: "", qty: 1 }]);
+  const addRow = () => {
+    setDetails((prev) => [
+      ...prev,
+      { book_id: "", rack_code: "", qty: 1 },
+    ]);
+  };
 
-  const removeRow = (index: number) =>
-    setDetails(details.filter((_, i) => i !== index));
+  const removeRow = (index: number) => {
+    if (details.length === 1) {
+      Alert.error("Minimal harus ada 1 buku");
+      return;
+    }
+    setDetails((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
 
-    // 🔥 Validasi tambahan
     if (!form.user_id || !form.loan_date || !form.due_date) {
-      alert("Lengkapi data utama");
+      Alert.error("Lengkapi data utama");
       return;
     }
 
     if (details.some((d) => !d.book_id)) {
-      alert("Pilih semua buku terlebih dahulu");
+      Alert.error("Semua buku harus dipilih");
       return;
     }
 
     setLoading(true);
 
     try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, details }),
-      });
+      const payload: any = {
+        user_id: Number(form.user_id),
+        loan_date: form.loan_date,
+        due_date: form.due_date,
+        details,
+      };
 
-      if (!res.ok) throw new Error();
+      const data: any = await LoansAPI.create(payload);
 
-      alert("Pinjaman berhasil!");
+      if (!data.status) {
+        throw new Error(data.message || "Gagal menyimpan");
+      }
+
+      await Alert.success("Pinjaman berhasil dibuat");
       router.push("/admin/loan");
-    } catch (err) {
-      console.error(err);
-      alert("Gagal menyimpan");
+    } catch (err: any) {
+      await Alert.error(err.message || "Terjadi kesalahan");
     } finally {
       setLoading(false);
     }
   };
+
+  if (loading) {
+    return <LoadingCard />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 py-10 px-4">
