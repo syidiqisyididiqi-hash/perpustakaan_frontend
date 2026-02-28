@@ -3,18 +3,36 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FiSearch, FiEdit, FiTrash2, FiPlus } from "react-icons/fi";
+import { Alert } from "@/app/lib/alert"; 
 
 const API_URL = "http://127.0.0.1:8000/api/books";
+
+type Book = {
+  id: number;
+  title: string;
+  author?: string;
+  isbn?: string;
+  publisher?: string;
+  published_year?: number;
+  rack_code?: string;
+  category?: { name: string };
+  stock: number;
+  cover?: string;
+};
 
 export default function BookPage() {
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
-  const [books, setBooks] = useState<any[]>([]);
+  const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchBooks();
   }, []);
+
+  useEffect(() => {
+    setSearch(query);
+  }, [query]);
 
   const fetchBooks = async () => {
     setLoading(true);
@@ -22,15 +40,31 @@ export default function BookPage() {
       const res = await fetch(API_URL);
       const data = await res.json();
       setBooks(data.data ?? []);
+    } catch {
+      Alert.error("Gagal mengambil data buku");
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Hapus buku ini?")) return;
-    await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-    fetchBooks();
+    const confirm = await Alert.confirmDelete();
+    if (!confirm.isConfirmed) return;
+
+    try {
+      const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        Alert.error(data.message || "Gagal menghapus buku");
+        return;
+      }
+
+      await Alert.success("Buku berhasil dihapus");
+      fetchBooks();
+    } catch {
+      Alert.error("Terjadi kesalahan server");
+    }
   };
 
   const filtered = books.filter((b) => {
@@ -130,26 +164,11 @@ export default function BookPage() {
                       <p className="text-xs text-slate-500">{b.author}</p>
                     </td>
 
-                    <td className="p-4 text-center text-slate-600">
-                      {b.isbn || "-"}
-                    </td>
-
-                    <td className="p-4 text-center text-slate-600">
-                      {b.publisher || "-"}
-                    </td>
-
-                    <td className="p-4 text-center">
-                      {b.published_year || "-"}
-                    </td>
-
-                    <td className="p-4 text-center">
-                      {b.rack_code || "-"}
-                    </td>
-
-                    <td className="p-4 text-center">
-                      {b.category?.name || "-"}
-                    </td>
-
+                    <td className="p-4 text-center text-slate-600">{b.isbn || "-"}</td>
+                    <td className="p-4 text-center text-slate-600">{b.publisher || "-"}</td>
+                    <td className="p-4 text-center">{b.published_year || "-"}</td>
+                    <td className="p-4 text-center">{b.rack_code || "-"}</td>
+                    <td className="p-4 text-center">{b.category?.name || "-"}</td>
                     <td className="p-4 text-center">{b.stock}</td>
 
                     <td className="p-4 text-center">
@@ -164,7 +183,7 @@ export default function BookPage() {
                       </span>
                     </td>
 
-                    <td className="p-4">
+                    <td className="p-4 text-center">
                       <div className="flex justify-center gap-2">
                         <Link href={`/admin/book/${b.id}/edit`}>
                           <button className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200">

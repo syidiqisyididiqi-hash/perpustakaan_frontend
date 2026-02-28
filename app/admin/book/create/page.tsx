@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, ChangeEvent, FormEvent, useEffect } from "react";
 import { CategoriesAPI } from "@/app/lib/api/category";
+import { Alert } from "@/app/lib/alert";
 import {
   FiBook,
   FiUser,
@@ -13,6 +14,7 @@ import {
   FiImage,
   FiCalendar,
 } from "react-icons/fi";
+import { LoadingCard } from "../../components/LoadingCard";
 
 const API_URL = "http://127.0.0.1:8000/api/books";
 
@@ -22,18 +24,6 @@ export default function CreateBookPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [previewCover, setPreviewCover] = useState<string>("");
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const data = await CategoriesAPI.getAll();
-        setCategories(data.data || []);
-      } finally {
-        setLoadingCategories(false);
-      }
-    };
-    fetchCategories();
-  }, []);
 
   const [form, setForm] = useState({
     category_id: "",
@@ -47,12 +37,27 @@ export default function CreateBookPage() {
     cover: null as File | null,
   });
 
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await CategoriesAPI.getAll();
+        setCategories(data.data || []);
+      } catch (err) {
+        console.error("Gagal memuat kategori");
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    const { name, value, files } = e.target as HTMLInputElement;
+    const target = e.target as HTMLInputElement;
+    const { name, value, files } = target;
 
-    if (name === "cover" && files) {
+    if (name === "cover" && files && files[0]) {
       setForm({ ...form, cover: files[0] });
       setPreviewCover(URL.createObjectURL(files[0]));
     } else {
@@ -66,42 +71,45 @@ export default function CreateBookPage() {
 
     try {
       const fd = new FormData();
-
-      fd.append("category_id", String(Number(form.category_id)));
+      fd.append("category_id", form.category_id);
       fd.append("isbn", form.isbn);
       fd.append("title", form.title);
       fd.append("author", form.author);
       fd.append("publisher", form.publisher);
-      fd.append("published_year", String(Number(form.published_year)));
-      fd.append("stock", String(Number(form.stock)));
+      fd.append("published_year", form.published_year);
+      fd.append("stock", form.stock);
       fd.append("rack_code", form.rack_code);
-
       if (form.cover) fd.append("cover", form.cover);
 
-      const token =
-        typeof window !== "undefined" ? localStorage.getItem("token") : null;
-
-      const headers: any = { Accept: "application/json" };
-      if (token) headers.Authorization = `Bearer ${token}`;
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
       const res = await fetch(API_URL, {
         method: "POST",
         body: fd,
-        headers,
+        headers: {
+          "Accept": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        },
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
-      if (!res.ok) throw new Error(data.message);
+      if (!res.ok) {
+        throw new Error(data.message || "Gagal menambahkan buku");
+      }
 
-      alert("Buku berhasil ditambahkan");
+      await Alert.success("Buku berhasil ditambahkan");
       router.push("/admin/book");
     } catch (err: any) {
-      alert(err.message);
+      Alert.error(err.message || "Terjadi kesalahan koneksi");
     } finally {
       setLoading(false);
     }
   };
+
+  if (loadingCategories) {
+    return <LoadingCard />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 py-10 px-4">
@@ -143,13 +151,13 @@ export default function CreateBookPage() {
               </div>
 
               <Input icon={<FiPackage />} name="publisher" placeholder="Penerbit" onChange={handleChange} />
-              <Input icon={<FiCalendar />} name="published_year" placeholder="Tahun Terbit" onChange={handleChange} />
+              <Input icon={<FiCalendar />} name="published_year" placeholder="Tahun Terbit" type="number" onChange={handleChange} />
               <Input icon={<FiMapPin />} name="rack_code" placeholder="Kode Rak" onChange={handleChange} />
               <Input icon={<FiPackage />} name="stock" type="number" placeholder="Stock" onChange={handleChange} />
             </div>
 
             {previewCover && (
-              <img src={previewCover} className="w-40 rounded-lg border mb-3" />
+              <img src={previewCover} className="w-40 rounded-lg border mb-3" alt="Preview" />
             )}
 
             <div className="relative">
@@ -160,6 +168,7 @@ export default function CreateBookPage() {
                 type="file"
                 name="cover"
                 onChange={handleChange}
+                accept="image/*"
                 className="w-full pl-10 pr-3 py-2.5 rounded-lg border text-sm"
               />
             </div>
@@ -168,15 +177,19 @@ export default function CreateBookPage() {
               <button
                 type="button"
                 onClick={() => router.push("/admin/book")}
-                className="w-full border py-3 rounded-xl"
+                className="w-full border py-3 rounded-xl hover:bg-slate-50 transition-colors"
               >
                 Batal
               </button>
 
               <button
+                type="submit"
                 disabled={loading}
-                className="w-full bg-indigo-600 text-white py-3 rounded-xl"
+                className="w-full bg-indigo-600 text-white py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-indigo-700 transition-colors"
               >
+                {loading && (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                )}
                 {loading ? "Menyimpan..." : "Simpan Buku"}
               </button>
             </div>
@@ -197,7 +210,7 @@ function Input({ icon, name, onChange, type = "text", placeholder }: any) {
         placeholder={placeholder}
         onChange={onChange}
         required
-        className="w-full pl-10 pr-3 py-2.5 rounded-lg border text-sm"
+        className="w-full pl-10 pr-3 py-2.5 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
       />
     </div>
   );

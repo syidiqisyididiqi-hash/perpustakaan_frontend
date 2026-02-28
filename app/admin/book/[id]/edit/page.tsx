@@ -3,6 +3,8 @@
 import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import { CategoriesAPI } from "@/app/lib/api/category";
+import { LoadingCard } from "@/app/admin/components/LoadingCard";
+import { Alert } from "@/app/lib/alert";
 import {
   FiBook,
   FiUser,
@@ -69,7 +71,7 @@ export default function EditBookPage() {
         cover_url: book.cover ?? "",
       });
     } catch {
-      alert("Gagal mengambil data buku");
+      Alert.error("Gagal mengambil data buku");
     } finally {
       setPageLoading(false);
     }
@@ -94,11 +96,9 @@ export default function EditBookPage() {
       setLoading(true);
 
       const fd = new FormData();
-
       Object.entries(form).forEach(([k, v]) => {
         if (k !== "cover_url" && v !== null) fd.append(k, v as any);
       });
-
       fd.append("_method", "PUT");
 
       const res = await fetch(`${API_URL}/${id}`, {
@@ -107,23 +107,25 @@ export default function EditBookPage() {
         headers: { Accept: "application/json" },
       });
 
-      if (!res.ok) throw new Error();
+      const data = await res.json().catch(() => ({}));
 
-      alert("Buku berhasil diupdate");
+      if (!res.ok) {
+        await Alert.error(data.message || "Gagal update buku");
+        return;
+      }
+
+      await Alert.success("Buku berhasil diupdate");
       router.push("/admin/book");
     } catch {
-      alert("Gagal update buku");
+      Alert.error("Gagal update buku");
     } finally {
       setLoading(false);
     }
   };
 
-  if (pageLoading)
-    return (
-      <div className="h-screen flex items-center justify-center text-slate-500">
-        Loading...
-      </div>
-    );
+  if (pageLoading) {
+    return <LoadingCard />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 py-10 px-4">
@@ -131,14 +133,12 @@ export default function EditBookPage() {
 
         <div className="bg-gradient-to-r from-indigo-600 to-slate-900 rounded-2xl p-6 text-white shadow-lg">
           <h1 className="text-2xl font-bold">Edit Buku</h1>
-          <p className="text-indigo-100 text-sm">
-            Perbarui data buku perpustakaan
-          </p>
+          <p className="text-indigo-100 text-sm">Perbarui data buku perpustakaan</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg border p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-
+            
             <Section title="Informasi Buku">
               <div className="grid md:grid-cols-2 gap-5">
                 <Input icon={<FiBook />} name="title" value={form.title} onChange={handleChange} placeholder="Judul Buku" />
@@ -153,7 +153,23 @@ export default function EditBookPage() {
                 />
 
                 <Input icon={<FiPackage />} name="publisher" value={form.publisher} onChange={handleChange} placeholder="Penerbit" />
-                <Input icon={<FiCalendar />} name="published_year" value={form.published_year} onChange={handleChange} placeholder="Tahun Terbit" />
+
+                <div className="relative">
+                  <div className="absolute left-3 top-3 text-slate-400"><FiCalendar /></div>
+                  <select
+                    name="published_year"
+                    value={form.published_year}
+                    onChange={handleChange}
+                    required
+                    className="w-full pl-10 pr-3 py-2.5 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                  >
+                    <option value="">Pilih Tahun</option>
+                    {Array.from({ length: new Date().getFullYear() - 1899 }, (_, i) => 1900 + i).map(year => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                </div>
+
                 <Input icon={<FiMapPin />} name="rack_code" value={form.rack_code} onChange={handleChange} placeholder="Kode Rak" />
                 <Input icon={<FiPackage />} name="stock" value={form.stock} onChange={handleChange} placeholder="Stock" />
               </div>
@@ -162,23 +178,15 @@ export default function EditBookPage() {
             <Section title="Cover Buku">
               <div className="space-y-3">
                 {form.cover_url && !form.cover && (
-                  <img
-                    src={`${STORAGE_URL}/${form.cover_url}`}
-                    className="w-40 rounded-lg border"
-                  />
+                  <img src={`${STORAGE_URL}/${form.cover_url}`} className="w-40 rounded-lg border" />
                 )}
 
                 {form.cover && (
-                  <img
-                    src={URL.createObjectURL(form.cover)}
-                    className="w-40 rounded-lg border"
-                  />
+                  <img src={URL.createObjectURL(form.cover)} className="w-40 rounded-lg border" />
                 )}
 
                 <div className="relative">
-                  <div className="absolute left-3 top-3 text-slate-400">
-                    <FiImage />
-                  </div>
+                  <div className="absolute left-3 top-3 text-slate-400"><FiImage /></div>
                   <input
                     type="file"
                     name="cover"
@@ -190,25 +198,16 @@ export default function EditBookPage() {
             </Section>
 
             <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => router.back()}
-                className="flex-1 border border-slate-300 py-3 rounded-xl font-semibold text-slate-700 hover:bg-slate-100"
-              >
+              <button type="button" onClick={() => router.back()} className="flex-1 border border-slate-300 py-3 rounded-xl font-semibold text-slate-700 hover:bg-slate-100">
                 Batal
               </button>
 
-              <button
-                disabled={loading}
-                className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-semibold shadow hover:bg-indigo-700"
-              >
+              <button disabled={loading} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-semibold shadow hover:bg-indigo-700">
                 {loading ? "Menyimpan..." : "Update Buku"}
               </button>
             </div>
-
           </form>
         </div>
-
       </div>
     </div>
   );
@@ -232,7 +231,7 @@ function Input({ icon, name, value, onChange, placeholder }: any) {
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="w-full pl-10 pr-3 py-2.5 rounded-lg border text-sm"
+        className="w-full pl-10 pr-3 py-2.5 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
       />
     </div>
   );
@@ -246,13 +245,11 @@ function SelectCategory({ icon, value, options, onChange }: any) {
         name="category_id"
         value={value}
         onChange={onChange}
-        className="w-full pl-10 pr-3 py-2.5 rounded-lg border text-sm"
+        className="w-full pl-10 pr-3 py-2.5 rounded-lg border text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
       >
         <option value="">Pilih Kategori</option>
         {options.map((c: any) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
+          <option key={c.id} value={c.id}>{c.name}</option>
         ))}
       </select>
     </div>
