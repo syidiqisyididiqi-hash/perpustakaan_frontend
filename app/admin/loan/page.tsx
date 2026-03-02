@@ -6,8 +6,6 @@ import { FiSearch, FiEdit, FiTrash2, FiPlus, FiEye } from "react-icons/fi";
 import { LoansAPI } from "@/app/lib/api/loans";
 import { Alert } from "@/app/lib/alert";
 
-const API_URL = "http://127.0.0.1:8000/api/loans";
-
 type Loan = {
   id: number;
   user: string;
@@ -34,23 +32,30 @@ export default function LoanPage() {
       const data: any = await LoansAPI.getAll();
 
       if (data.status) {
-        const mapped = data.data.map((l: any) => ({
-          id: l.id,
-          user: l.user?.name || "-",
-          loanDate: formatDate(l.loan_date),
-          dueDate: formatDate(l.due_date),
-          status: l.status,
+        const mapped = data.data.map((l: any) => {
+          const details = l.loan_details || [];
 
-          books:
-            l.loan_details?.length > 0
-              ? l.loan_details
-                  .map(
-                    (d: any) =>
-                      `${d.book?.title || "-"} (Qty: ${d.qty})`
-                  )
-                  .join("\n")
-              : "-",
-        }));
+          const allReturned =
+            details.length > 0 &&
+            details.every((d: any) => d.returned_at !== null);
+
+          return {
+            id: l.id,
+            user: l.user?.name || "-",
+            loanDate: formatDate(l.loan_date),
+            dueDate: formatDate(l.due_date),
+            status: allReturned ? "returned" : "borrowed",
+            books:
+              details.length > 0
+                ? details
+                    .map((d: any) => {
+                      const returned = d.returned_at ? "✔" : "❌";
+                      return `${d.book?.title || "-"} (Qty: ${d.qty}) ${returned}`;
+                    })
+                    .join("\n")
+                : "-",
+          };
+        });
 
         setLoans(mapped);
       }
@@ -74,8 +79,7 @@ export default function LoanPage() {
     if (!confirm.isConfirmed) return;
 
     try {
-      setLoading(true); 
-
+      setLoading(true);
       const data: any = await LoansAPI.delete(id);
 
       if (!data.status) {
@@ -90,6 +94,7 @@ export default function LoanPage() {
       setLoading(false);
     }
   };
+
   return (
     <div className="space-y-5">
       <div className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-slate-900 rounded-2xl p-5 text-white shadow-lg">
@@ -105,7 +110,6 @@ export default function LoanPage() {
             <div className="flex bg-white rounded-xl overflow-hidden shadow w-full sm:w-72">
               <input
                 name="search"
-                aria-label="Cari user"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Cari user..."
@@ -161,7 +165,9 @@ export default function LoanPage() {
 
                     <td className="p-4 font-semibold">{l.user}</td>
 
-                    <td className="p-4 whitespace-pre-line">{l.books}</td>
+                    <td className="p-4 whitespace-pre-line text-xs font-mono">
+                      {l.books}
+                    </td>
 
                     <td className="p-4 text-center">{l.loanDate}</td>
 
