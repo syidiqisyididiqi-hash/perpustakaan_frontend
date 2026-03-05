@@ -21,7 +21,6 @@ export default function FinePage() {
   const [fines, setFines] = useState<Fine[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch fines dari API
   const fetchFines = async () => {
     setLoading(true);
     try {
@@ -29,7 +28,6 @@ export default function FinePage() {
       const data = await res.json();
 
       if (data.status) {
-        // Pastikan data.data selalu array
         const items: any[] = Array.isArray(data.data) ? data.data : [];
 
         const mapped = items.map((f: any) => ({
@@ -78,7 +76,6 @@ export default function FinePage() {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
       <div className="bg-gradient-to-r from-red-600 via-red-700 to-slate-900 rounded-2xl p-5 text-white shadow-lg">
         <div className="flex flex-col lg:flex-row gap-5 lg:items-center lg:justify-between">
           <div>
@@ -111,7 +108,6 @@ export default function FinePage() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -137,13 +133,17 @@ export default function FinePage() {
               ) : filtered.length > 0 ? (
                 filtered.map((f, index) => (
                   <tr key={f.id} className="border-t hover:bg-red-50">
-                    <td className="p-4 text-center font-semibold">{index + 1}</td>
+                    <td className="p-4 text-center font-semibold">
+                      {index + 1}
+                    </td>
                     <td className="p-4 font-semibold">{f.user}</td>
                     <td className="p-4 text-center">{f.rackCode}</td>
                     <td className="p-4 text-center">{f.overdueDays} Hari</td>
+
                     <td className="p-4 text-center font-semibold text-red-600">
-                      Rp {f.totalFine.toLocaleString()}
+                      Rp {f.totalFine.toLocaleString("id-ID")}
                     </td>
+
                     <td className="p-4 text-center">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-semibold ${
@@ -155,6 +155,7 @@ export default function FinePage() {
                         {f.status === "paid" ? "Lunas" : "Belum Bayar"}
                       </span>
                     </td>
+
                     <td className="p-4 text-center">
                       <div className="flex justify-center gap-2">
                         <Link href={`/admin/fine/${f.id}`}>
@@ -162,11 +163,13 @@ export default function FinePage() {
                             <FiEye size={16} />
                           </button>
                         </Link>
+
                         <Link href={`/admin/fine/${f.id}/edit`}>
                           <button className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200">
                             <FiEdit size={16} />
                           </button>
                         </Link>
+
                         <button
                           onClick={() => handleDelete(f.id)}
                           className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
