@@ -21,35 +21,36 @@ export default function FinePage() {
   const [fines, setFines] = useState<Fine[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchFines = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(API_URL);
-      const data = await res.json();
+ const fetchFines = async () => {
+  setLoading(true);
 
-      if (data.status) {
-        const items: any[] = Array.isArray(data.data) ? data.data : [];
+  try {
+    const res = await fetch(API_URL);
+    const data = await res.json();
 
-        const mapped = items.map((f: any) => ({
-          id: f.id,
-          user: f.loanDetail?.loan?.user?.name || "-",
-          rackCode: f.loanDetail?.book?.rack_code || "-",
-          overdueDays: f.overdue_days,
-          totalFine: f.total_fine,
-          status: f.status,
-        }));
+    if (data.status) {
+      const items: any[] = Array.isArray(data.data) ? data.data : [];
 
-        setFines(mapped);
-      } else {
-        setFines([]);
-      }
-    } catch (error) {
-      console.error("Fetch fines error:", error);
+      const mapped = items.map((f: any) => ({
+        id: f.id,
+        user: f.loan_detail?.loan?.user?.name || "-",
+        rackCode: f.loan_detail?.book?.rack_code || "-",
+        overdueDays: f.overdue_days || 0,
+        totalFine: f.total_fine || 0,
+        status: f.status || "unpaid",
+      }));
+
+      setFines(mapped);
+    } else {
       setFines([]);
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (error) {
+    console.error("Fetch fines error:", error);
+    setFines([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchFines();
@@ -98,12 +99,6 @@ export default function FinePage() {
                 <FiSearch size={16} />
               </button>
             </div>
-
-            <Link href="/admin/fine/create">
-              <button className="flex items-center gap-2 bg-white text-red-700 px-5 py-2.5 rounded-xl text-sm font-semibold shadow hover:scale-105 transition">
-                <FiPlus size={16} /> Tambah Denda
-              </button>
-            </Link>
           </div>
         </div>
       </div>

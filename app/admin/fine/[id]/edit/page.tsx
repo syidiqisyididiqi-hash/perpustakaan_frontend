@@ -1,11 +1,12 @@
 "use client";
 
+import { LoadingCard } from "@/app/admin/components/LoadingCard";
 import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import { FiBookOpen, FiHash, FiDollarSign } from "react-icons/fi";
 
-const API_FINE = "http://127.0.0.1:8000/api/fines";
-const API_LOAN = "http://127.0.0.1:8000/api/loans";
+const API_URL = "http://127.0.0.1:8000/api/fines";
+const LOAN_API = "http://127.0.0.1:8000/api/loans";
 
 export default function EditFinePage() {
   const router = useRouter();
@@ -25,51 +26,55 @@ export default function EditFinePage() {
   });
 
   useEffect(() => {
-    fetchLoans();
-    fetchFine();
-  }, []);
+    const loadData = async () => {
+      try {
 
-  const fetchLoans = async () => {
-    const res = await fetch(API_LOAN);
-    const data = await res.json();
-    if (data.status) setLoans(data.data);
-  };
+        const loanRes = await fetch(LOAN_API);
+        const loanData = await loanRes.json();
 
-  const fetchFine = async () => {
-    try {
-      const res = await fetch(`${API_FINE}/${id}`);
-      const data = await res.json();
-      const fine = data.data;
+        if (loanData.status) {
+          setLoans(loanData.data);
+        }
 
-      setForm({
-        loan_id: fine.loan_id.toString(),
-        rack_code: fine.rack_code,
-        overdue_days: fine.overdue_days.toString(),
-        total_fine: fine.total_fine.toString(),
-        status: fine.status,
-      });
-    } catch {
-      alert("Gagal mengambil data denda");
-    } finally {
-      setPageLoading(false);
-    }
-  };
+        const fineRes = await fetch(`${API_URL}/${id}`);
+        const fineData = await fineRes.json();
+
+        const fine = fineData.data;
+
+        const loanId = fine.loan_detail?.loan?.id || "";
+        const rackCode = fine.loan_detail?.book?.rack_code || "-";
+
+        setForm({
+          loan_id: loanId.toString(),
+          rack_code: rackCode,
+          overdue_days: fine.overdue_days.toString(),
+          total_fine: fine.total_fine.toString(),
+          status: fine.status,
+        });
+
+      } catch (err) {
+        console.error("Fetch error:", err);
+      } finally {
+        setPageLoading(false);
+      }
+    };
+
+    loadData();
+  }, [id]);
 
   useEffect(() => {
-    if (!form.loan_id) return;
-
-    const loan = loans.find((l) => l.id.toString() === form.loan_id);
-    if (!loan) return;
-
-    const rack = loan.loan_details?.[0]?.book?.rack_code || "-";
+    const dailyRate = 5000;
+    const total = Number(form.overdue_days) * dailyRate;
 
     setForm((prev) => ({
       ...prev,
-      rack_code: rack,
+      total_fine: total.toString(),
     }));
-  }, [form.loan_id, loans]);
+  }, [form.overdue_days]);
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
@@ -78,29 +83,33 @@ export default function EditFinePage() {
     setLoading(true);
 
     try {
-      await fetch(`${API_FINE}/${id}`, {
+
+      const res = await fetch(`${API_URL}/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          overdue_days: Number(form.overdue_days),
           status: form.status,
         }),
       });
 
-      router.push("/admin/fine");
-    } catch {
+      const data = await res.json();
+
+      if (data.status) {
+        alert("Status denda berhasil diperbarui");
+        router.push("/admin/fine");
+      }
+
+    } catch (err) {
+      console.error(err);
       alert("Gagal update denda");
     } finally {
       setLoading(false);
     }
   };
 
-  if (pageLoading)
-    return (
-      <div className="h-screen flex items-center justify-center text-slate-500">
-        Loading...
-      </div>
-    );
+  if (pageLoading) return <LoadingCard />;
 
   return (
     <div className="min-h-screen bg-slate-100 py-10 px-4">
@@ -108,54 +117,81 @@ export default function EditFinePage() {
 
         <div className="bg-gradient-to-r from-red-600 to-slate-900 rounded-2xl p-6 text-white shadow-lg">
           <h1 className="text-2xl font-bold">Edit Denda</h1>
-          <p className="text-red-100 text-sm mt-1">Perbarui data denda peminjaman</p>
+          <p className="text-red-100 text-sm mt-1">
+            Perbarui status denda
+          </p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg border p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
 
-            <Section title="Informasi Loan">
-              <Select
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Informasi Loan</h3>
+
+              <select
                 name="loan_id"
                 value={form.loan_id}
-                onChange={handleChange}
-                options={loans}
-              />
-            </Section>
+                disabled
+                className="w-full px-4 py-2.5 rounded-xl border bg-slate-100"
+              >
+                {loans.map((loan) => (
+                  <option key={loan.id} value={loan.id}>
+                    {loan.id} - {loan.user?.name || "Unknown"}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            <Section title="Informasi Denda">
-              <Input icon={<FiHash />} value={form.rack_code} readOnly />
-              <Input
-                icon={<FiBookOpen />}
-                name="overdue_days"
-                value={form.overdue_days}
-                onChange={handleChange}
-                type="number"
-              />
-              <Input
-                icon={<FiDollarSign />}
-                value={`Rp ${Number(form.total_fine).toLocaleString("id-ID")}`}
-                readOnly
-              />
-            </Section>
+            <div className="space-y-4">
 
-            <Section title="Status">
+              <div className="flex items-center gap-3 px-4 py-2.5 border rounded-xl">
+                <FiHash />
+                <input
+                  value={form.rack_code}
+                  readOnly
+                  className="flex-1 outline-none bg-transparent"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 px-4 py-2.5 border rounded-xl">
+                <FiBookOpen />
+                <input
+                  value={form.overdue_days}
+                  readOnly
+                  className="flex-1 outline-none bg-transparent"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 px-4 py-2.5 border rounded-xl">
+                <FiDollarSign />
+                <input
+                  value={`Rp ${Number(form.total_fine).toLocaleString("id-ID")}`}
+                  readOnly
+                  className="flex-1 outline-none bg-transparent"
+                />
+              </div>
+
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Status</h3>
+
               <select
                 name="status"
                 value={form.status}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm"
+                className="w-full px-4 py-2.5 border rounded-xl"
               >
                 <option value="unpaid">Belum Dibayar</option>
                 <option value="paid">Sudah Dibayar</option>
               </select>
-            </Section>
+            </div>
 
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="flex-1 border border-slate-300 py-3 rounded-xl font-semibold text-slate-700 hover:bg-slate-100"
+                className="flex-1 border py-3 rounded-xl"
               >
                 Batal
               </button>
@@ -163,11 +199,8 @@ export default function EditFinePage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-red-600 text-white py-3 rounded-xl font-semibold shadow hover:bg-red-700 flex justify-center items-center gap-2"
+                className="flex-1 bg-red-600 text-white py-3 rounded-xl"
               >
-                {loading && (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                )}
                 {loading ? "Menyimpan..." : "Update Denda"}
               </button>
             </div>
@@ -176,45 +209,5 @@ export default function EditFinePage() {
         </div>
       </div>
     </div>
-  );
-}
-
-
-function Section({ title, children }: any) {
-  return (
-    <div className="space-y-4">
-      <h2 className="font-semibold text-slate-700 border-b pb-2">{title}</h2>
-      {children}
-    </div>
-  );
-}
-
-function Input({ icon, ...props }: any) {
-  return (
-    <div className="relative">
-      <div className="absolute left-3 top-3 text-slate-400">{icon}</div>
-      <input
-        {...props}
-        className="w-full pl-10 pr-3 py-2.5 rounded-xl border border-slate-300 text-sm outline-none"
-      />
-    </div>
-  );
-}
-
-function Select({ name, value, onChange, options }: any) {
-  return (
-    <select
-      name={name}
-      value={value}
-      onChange={onChange}
-      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm"
-    >
-      <option value="">Pilih Loan</option>
-      {options.map((opt: any) => (
-        <option key={opt.id} value={opt.id}>
-          Loan #{opt.id} — {opt.user?.name}
-        </option>
-      ))}
-    </select>
   );
 }
