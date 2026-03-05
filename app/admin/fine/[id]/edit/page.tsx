@@ -4,6 +4,7 @@ import { LoadingCard } from "@/app/admin/components/LoadingCard";
 import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import { FiBookOpen, FiHash, FiDollarSign } from "react-icons/fi";
+import { Alert } from "@/app/lib/alert";
 
 const API_URL = "http://127.0.0.1:8000/api/fines";
 const LOAN_API = "http://127.0.0.1:8000/api/loans";
@@ -28,7 +29,6 @@ export default function EditFinePage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-
         const loanRes = await fetch(LOAN_API);
         const loanData = await loanRes.json();
 
@@ -39,6 +39,12 @@ export default function EditFinePage() {
         const fineRes = await fetch(`${API_URL}/${id}`);
         const fineData = await fineRes.json();
 
+        if (!fineData.status) {
+          Alert.error("Data denda tidak ditemukan");
+          router.push("/admin/fine");
+          return;
+        }
+
         const fine = fineData.data;
 
         const loanId = fine.loan_detail?.loan?.id || "";
@@ -47,20 +53,20 @@ export default function EditFinePage() {
         setForm({
           loan_id: loanId.toString(),
           rack_code: rackCode,
-          overdue_days: fine.overdue_days.toString(),
-          total_fine: fine.total_fine.toString(),
-          status: fine.status,
+          overdue_days: fine.overdue_days?.toString() || "0",
+          total_fine: fine.total_fine?.toString() || "0",
+          status: fine.status || "unpaid",
         });
-
       } catch (err) {
-        console.error("Fetch error:", err);
+        console.error(err);
+        Alert.error("Gagal mengambil data denda");
       } finally {
         setPageLoading(false);
       }
     };
 
-    loadData();
-  }, [id]);
+    if (id) loadData();
+  }, [id, router]);
 
   useEffect(() => {
     const dailyRate = 5000;
@@ -83,7 +89,6 @@ export default function EditFinePage() {
     setLoading(true);
 
     try {
-
       const res = await fetch(`${API_URL}/${id}`, {
         method: "PUT",
         headers: {
@@ -94,16 +99,18 @@ export default function EditFinePage() {
         }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
-      if (data.status) {
-        alert("Status denda berhasil diperbarui");
-        router.push("/admin/fine");
+      if (!res.ok || !data.status) {
+        Alert.error(data.message || "Gagal update denda");
+        return;
       }
 
+      await Alert.success("Status denda berhasil diperbarui");
+      router.push("/admin/fine");
     } catch (err) {
       console.error(err);
-      alert("Gagal update denda");
+      Alert.error("Terjadi kesalahan server");
     } finally {
       setLoading(false);
     }
@@ -114,7 +121,6 @@ export default function EditFinePage() {
   return (
     <div className="min-h-screen bg-slate-100 py-10 px-4">
       <div className="max-w-3xl mx-auto space-y-6">
-
         <div className="bg-gradient-to-r from-red-600 to-slate-900 rounded-2xl p-6 text-white shadow-lg">
           <h1 className="text-2xl font-bold">Edit Denda</h1>
           <p className="text-red-100 text-sm mt-1">
@@ -124,7 +130,6 @@ export default function EditFinePage() {
 
         <div className="bg-white rounded-2xl shadow-lg border p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-
             <div>
               <h3 className="text-lg font-semibold mb-3">Informasi Loan</h3>
 
@@ -143,7 +148,6 @@ export default function EditFinePage() {
             </div>
 
             <div className="space-y-4">
-
               <div className="flex items-center gap-3 px-4 py-2.5 border rounded-xl">
                 <FiHash />
                 <input
@@ -170,7 +174,6 @@ export default function EditFinePage() {
                   className="flex-1 outline-none bg-transparent"
                 />
               </div>
-
             </div>
 
             <div>
@@ -204,7 +207,6 @@ export default function EditFinePage() {
                 {loading ? "Menyimpan..." : "Update Denda"}
               </button>
             </div>
-
           </form>
         </div>
       </div>

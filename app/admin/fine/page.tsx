@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FiSearch, FiEdit, FiTrash2, FiPlus, FiEye } from "react-icons/fi";
+import { Alert } from "@/app/lib/alert";
 
 const API_URL = "http://127.0.0.1:8000/api/fines";
 
@@ -46,6 +47,7 @@ export default function FinePage() {
     }
   } catch (error) {
     console.error("Fetch fines error:", error);
+    Alert.error("Gagal mengambil data denda");
     setFines([]);
   } finally {
     setLoading(false);
@@ -56,22 +58,35 @@ export default function FinePage() {
     fetchFines();
   }, []);
 
+  useEffect(() => {
+    setSearch(query);
+  }, [query]);
+
   const filtered = fines.filter((f) =>
     f.user.toLowerCase().includes(search.toLowerCase())
   );
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Hapus data denda ini?")) return;
+    const confirm = await Alert.confirmDelete();
+    if (!confirm.isConfirmed) return;
 
     try {
       const res = await fetch(`${API_URL}/${id}`, {
         method: "DELETE",
       });
 
-      const data = await res.json();
-      if (data.status) fetchFines();
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        Alert.error(data.message || "Gagal menghapus denda");
+        return;
+      }
+
+      await Alert.success("Denda berhasil dihapus");
+      fetchFines();
     } catch (error) {
       console.error(error);
+      Alert.error("Terjadi kesalahan server");
     }
   };
 
@@ -99,6 +114,13 @@ export default function FinePage() {
                 <FiSearch size={16} />
               </button>
             </div>
+
+            <Link href="/admin/fine/create">
+              <button className="flex items-center gap-2 bg-white text-red-700 px-5 py-2.5 rounded-xl text-sm font-semibold shadow hover:scale-105 transition">
+                <FiPlus size={16} />
+                Tambah Denda
+              </button>
+            </Link>
           </div>
         </div>
       </div>
