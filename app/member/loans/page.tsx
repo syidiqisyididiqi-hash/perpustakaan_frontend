@@ -1,36 +1,63 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FiSearch } from "react-icons/fi";
 
-const loansData = [
-  {
-    id: 1,
-    book: "Clean Code",
-    borrowed: "2026-02-01",
-    due: "2026-02-10",
-    status: "Borrowed",
-  },
-  {
-    id: 2,
-    book: "Atomic Habits",
-    borrowed: "2026-01-10",
-    due: "2026-01-20",
-    status: "Returned",
-  },
-  {
-    id: 3,
-    book: "Design Patterns",
-    borrowed: "2026-01-25",
-    due: "2026-02-05",
-    status: "Late",
-  },
-];
+const API_URL = "http://127.0.0.1:8000/api/fines";
+
+type Loan = {
+  id: number;
+  book: string;
+  borrowed: string;
+  due: string;
+  status: string;
+};
 
 export default function MyLoansPage() {
   const [query, setQuery] = useState("");
+  const [loans, setLoans] = useState<Loan[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = loansData.filter((loan) =>
+  const fetchLoans = async () => {
+    setLoading(true);
+
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+
+      if (data.status) {
+        const items: any[] = Array.isArray(data.data) ? data.data : [];
+
+        const mapped = items.map((f: any) => ({
+          id: f.id,
+          book: f.loan_detail?.book?.title || "-",
+          borrowed: f.loan_detail?.loan?.borrow_date || "-",
+          due: f.loan_detail?.loan?.due_date || "-",
+          status:
+            f.status === "paid"
+              ? "Returned"
+              : f.overdue_days > 0
+              ? "Late"
+              : "Borrowed",
+        }));
+
+        setLoans(mapped);
+      } else {
+        setLoans([]);
+      }
+    } catch (error) {
+      console.error("Fetch loans error:", error);
+      setLoans([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLoans();
+  }, []);
+
+  const filtered = loans.filter((loan) =>
     loan.book.toLowerCase().includes(query.toLowerCase())
   );
 
@@ -50,7 +77,7 @@ export default function MyLoansPage() {
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
       <div className="max-w-6xl mx-auto">
-        
+
         <h1 className="text-3xl font-bold mb-6 text-gray-800">
           My Loans
         </h1>
@@ -77,12 +104,16 @@ export default function MyLoansPage() {
             </thead>
 
             <tbody>
-              {filtered.length === 0 ? (
+
+              {loading ? (
                 <tr>
-                  <td
-                    colSpan={4}
-                    className="text-center py-10 text-gray-400"
-                  >
+                  <td colSpan={4} className="text-center py-10 text-gray-400">
+                    Loading data...
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="text-center py-10 text-gray-400">
                     No loans found
                   </td>
                 </tr>
@@ -113,9 +144,11 @@ export default function MyLoansPage() {
                         {loan.status}
                       </span>
                     </td>
+
                   </tr>
                 ))
               )}
+
             </tbody>
           </table>
         </div>

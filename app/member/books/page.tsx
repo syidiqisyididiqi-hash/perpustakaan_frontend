@@ -1,70 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FiSearch } from "react-icons/fi";
+import Link from "next/link";
+import { LoadingCard } from "@/app/admin/components/LoadingCard";
+
+const API_URL = "http://127.0.0.1:8000/api/books";
+
+type Book = {
+  id: number;
+  title: string;
+  author?: string;
+  stock: number;
+  cover?: string;
+};
 
 export default function MemberBooksPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [books, setBooks] = useState<Book[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const books = [
-    {
-      id: 1,
-      title: "Clean Code",
-      author: "Robert C. Martin",
-      stock: 5,
-      image: "https://images-na.ssl-images-amazon.com/images/I/41SH-SvWPxL._SX374_BO1,204,203,200_.jpg",
-    },
-    {
-      id: 2,
-      title: "Atomic Habits",
-      author: "James Clear",
-      stock: 2,
-      image: "https://images-na.ssl-images-amazon.com/images/I/91bYsX41DVL.jpg",
-    },
-    {
-      id: 3,
-      title: "The Pragmatic Programmer",
-      author: "Andrew Hunt",
-      stock: 4,
-      image: "https://images-na.ssl-images-amazon.com/images/I/51A5cHQhSqL._SX380_BO1,204,203,200_.jpg",
-    },
-    {
-      id: 4,
-      title: "Deep Work",
-      author: "Cal Newport",
-      stock: 3,
-      image: "https://images-na.ssl-images-amazon.com/images/I/41-6i2sY+QL._SX331_BO1,204,203,200_.jpg",
-    },
-    {
-      id: 5,
-      title: "Design Patterns",
-      author: "Erich Gamma",
-      stock: 1,
-      image: "https://images-na.ssl-images-amazon.com/images/I/81gtKoapHFL.jpg",
-    },
-    {
-      id: 6,
-      title: "Refactoring",
-      author: "Martin Fowler",
-      stock: 6,
-      image: "https://images-na.ssl-images-amazon.com/images/I/51k+7wXvZLL._SX396_BO1,204,203,200_.jpg",
-    },
-    {
-      id: 7,
-      title: "You Don't Know JS",
-      author: "Kyle Simpson",
-      stock: 5,
-      image: "https://images-na.ssl-images-amazon.com/images/I/71kxa1-0mfL.jpg",
-    },
-    {
-      id: 8,
-      title: "Code Complete",
-      author: "Steve McConnell",
-      stock: 2,
-      image: "https://images-na.ssl-images-amazon.com/images/I/51W0IH0rjSL._SX404_BO1,204,203,200_.jpg",
-    },
-  ];
+  useEffect(() => {
+    fetchBooks();
+  }, []);
+
+  const fetchBooks = async () => {
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
+
+      setBooks(data.data ?? []);
+    } catch (error) {
+      console.error("Gagal mengambil data buku");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filtered = books.filter((b) =>
     b.title.toLowerCase().includes(search.toLowerCase())
@@ -99,43 +71,51 @@ export default function MemberBooksPage() {
         />
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        {currentBooks.map((book) => (
-          <div
-            key={book.id}
-            className="bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden flex flex-col"
-          >
-            <img
-              src={book.image}
-              alt={book.title}
-              className="h-56 w-full object-cover"
-            />
+      {loading ? (
+        <LoadingCard />
+      ) : (
+        <div className="grid md:grid-cols-3 gap-6">
+          {currentBooks.map((book) => (
+            <div
+              key={book.id}
+              className="bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden flex flex-col"
+            >
+              <img
+                src={
+                  book.cover
+                    ? `http://127.0.0.1:8000/storage/${book.cover}`
+                    : "/no-image.png"
+                }
+                alt={book.title}
+                className="h-56 w-full object-cover"
+              />
 
-            <div className="p-5 flex flex-col flex-1">
-              <h3 className="font-semibold text-lg">{book.title}</h3>
-              <p className="text-gray-500 text-sm mb-2">
-                {book.author}
-              </p>
+              <div className="p-5 flex flex-col flex-1">
+                <h3 className="font-semibold text-lg">
+                  {book.title}
+                </h3>
 
-              <p className="text-sm text-gray-600 mb-4">
-                Stock:{" "}
-                <span className="font-semibold">{book.stock}</span>
-              </p>
+                <p className="text-gray-500 text-sm mb-2">
+                  {book.author}
+                </p>
 
-              <button
-                className={`mt-auto w-full py-2 rounded-lg font-semibold transition ${
-                  book.stock > 0
-                    ? "bg-green-600 text-white hover:bg-green-700"
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                }`}
-                disabled={book.stock === 0}
-              >
-                {book.stock > 0 ? "Borrow Book" : "Out of Stock"}
-              </button>
+                <p className="text-sm text-gray-600 mb-4">
+                  Stock:{" "}
+                  <span className="font-semibold">
+                    {book.stock}
+                  </span>
+                </p>
+
+                <Link href={`/member/books/${book.id}`}>
+                  <button className="mt-auto w-full py-2 rounded-lg font-semibold transition bg-green-600 text-white hover:bg-green-700">
+                    Detail Buku
+                  </button>
+                </Link>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <div className="flex justify-center gap-2 pt-4">
         <button
