@@ -48,8 +48,16 @@ export default function EditBookPage() {
 
   const fetchData = async () => {
     try {
+
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
       const [bookRes, catRes] = await Promise.all([
-        fetch(`${API_URL}/${id}`),
+        fetch(`${API_URL}/${id}`, {
+          headers: {
+            Accept: "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        }),
         CategoriesAPI.getAll(),
       ]);
 
@@ -101,10 +109,15 @@ export default function EditBookPage() {
       });
       fd.append("_method", "PUT");
 
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
       const res = await fetch(`${API_URL}/${id}`, {
         method: "POST",
         body: fd,
-        headers: { Accept: "application/json" },
+        headers: {
+          Accept: "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
       });
 
       const data = await res.json().catch(() => ({}));
@@ -138,20 +151,13 @@ export default function EditBookPage() {
 
         <div className="bg-white rounded-2xl shadow-lg border p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-            
+
             <Section title="Informasi Buku">
               <div className="grid md:grid-cols-2 gap-5">
                 <Input icon={<FiBook />} name="title" value={form.title} onChange={handleChange} placeholder="Judul Buku" />
                 <Input icon={<FiUser />} name="author" value={form.author} onChange={handleChange} placeholder="Penulis" />
                 <Input icon={<FiHash />} name="isbn" value={form.isbn} onChange={handleChange} placeholder="ISBN" />
-
-                <SelectCategory
-                  icon={<FiLayers />}
-                  value={form.category_id}
-                  options={categories}
-                  onChange={handleChange}
-                />
-
+                <SelectCategory icon={<FiLayers />} value={form.category_id} options={categories} onChange={handleChange} />
                 <Input icon={<FiPackage />} name="publisher" value={form.publisher} onChange={handleChange} placeholder="Penerbit" />
 
                 <div className="relative">

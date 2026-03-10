@@ -79,17 +79,21 @@ export default function CreateBookPage() {
       fd.append("published_year", form.published_year);
       fd.append("stock", form.stock);
       fd.append("rack_code", form.rack_code);
-      if (form.cover) fd.append("cover", form.cover);
 
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      if (form.cover) {
+        fd.append("cover", form.cover);
+      }
+
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
       const res = await fetch(API_URL, {
         method: "POST",
-        body: fd,
         headers: {
-          "Accept": "application/json",
-          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+          Accept: "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
+        body: fd,
       });
 
       const data = await res.json().catch(() => ({}));

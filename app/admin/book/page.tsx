@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FiSearch, FiEdit, FiTrash2, FiPlus } from "react-icons/fi";
-import { Alert } from "@/app/lib/alert"; 
+import { Alert } from "@/app/lib/alert";
 
 const API_URL = "http://127.0.0.1:8000/api/books";
 
@@ -36,8 +36,17 @@ export default function BookPage() {
 
   const fetchBooks = async () => {
     setLoading(true);
+
     try {
-      const res = await fetch(API_URL);
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(API_URL, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
+
       const data = await res.json();
       setBooks(data.data ?? []);
     } catch {
@@ -52,7 +61,16 @@ export default function BookPage() {
     if (!confirm.isConfirmed) return;
 
     try {
-      const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`${API_URL}/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
+
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
@@ -164,8 +182,8 @@ export default function BookPage() {
                       <p className="text-xs text-slate-500">{b.author}</p>
                     </td>
 
-                    <td className="p-4 text-center text-slate-600">{b.isbn || "-"}</td>
-                    <td className="p-4 text-center text-slate-600">{b.publisher || "-"}</td>
+                    <td className="p-4 text-center">{b.isbn || "-"}</td>
+                    <td className="p-4 text-center">{b.publisher || "-"}</td>
                     <td className="p-4 text-center">{b.published_year || "-"}</td>
                     <td className="p-4 text-center">{b.rack_code || "-"}</td>
                     <td className="p-4 text-center">{b.category?.name || "-"}</td>
