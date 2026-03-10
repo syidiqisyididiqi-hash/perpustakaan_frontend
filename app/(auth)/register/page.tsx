@@ -4,36 +4,64 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { UsersAPI } from "@/app/lib/api/users";
+import Swal from "sweetalert2";
 
 export default function RegisterPage() {
-
-  const [name,setName] = useState("");
-  const [email,setEmail] = useState("");
-  const [password,setPassword] = useState("");
-  const [confirmPassword,setConfirmPassword] = useState("");
-  const [showPassword,setShowPassword] = useState(false);
-  const [showConfirm,setShowConfirm] = useState(false);
-
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleRegister = (e:React.FormEvent) =>{
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if(password.length < 6){
-      alert("Password minimal 6 karakter");
+    if (password.length < 6) {
+      await Swal.fire({
+        icon: "warning",
+        title: "Password Terlalu Pendek",
+        text: "Password minimal 6 karakter",
+      });
       return;
     }
 
-    if(password !== confirmPassword){
-      alert("Password tidak sama");
+    if (password !== confirmPassword) {
+      await Swal.fire({
+        icon: "warning",
+        title: "Password Tidak Cocok",
+        text: "Password dan konfirmasi password harus sama",
+      });
       return;
     }
 
-    console.log({name,email,password});
+    setIsLoading(true);
 
-    alert("Register berhasil (simulasi)");
-    router.push('/auth/login');
-  }
+    try {
+      const response = await UsersAPI.register(name, email, password);
+
+      await Swal.fire({
+        icon: "success",
+        title: "Register Berhasil",
+        text: "Akun berhasil dibuat, silakan login",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+
+      router.push("/auth/login");
+    } catch (error: any) {
+      await Swal.fire({
+        icon: "error",
+        title: "Register Gagal",
+        text: error.message || "Terjadi kesalahan saat registrasi",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -164,9 +192,10 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition text-sm font-medium"
+            disabled={isLoading}
+            className="w-full bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            Register
+            {isLoading ? "Loading..." : "Register"}
           </button>
 
         </form>

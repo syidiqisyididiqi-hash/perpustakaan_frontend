@@ -1,24 +1,62 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { UsersAPI } from "@/app/lib/api/users";
+import Swal from "sweetalert2";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [email,setEmail] = useState("");
-  const [password,setPassword] = useState("");
-  const [showPassword,setShowPassword] = useState(false);
-
-  const handleLogin = (e:React.FormEvent) =>{
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log({email,password});
-    alert("Login berhasil (simulasi)");
-  }
+    setIsLoading(true);
 
-  const handleFacebookLogin = () =>{
-    alert("Login Facebook berhasil (simulasi)");
-  }
+    try {
+      const response = await UsersAPI.login(email, password);
+      
+      // Store token dan user data
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("user", JSON.stringify(response.data.user));
+      
+      await Swal.fire({
+        icon: "success",
+        title: "Login Berhasil",
+        text: "Selamat datang kembali!",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+
+      // Route berdasarkan role user
+      if (response.data.user.role === "admin" || response.data.user.is_admin === 1) {
+        router.push("/admin");
+      } else {
+        router.push("/member");
+      }
+    } catch (error: any) {
+      await Swal.fire({
+        icon: "error",
+        title: "Login Gagal",
+        text: error.message || "Email atau password salah",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFacebookLogin = () => {
+    Swal.fire({
+      icon: "info",
+      title: "Fitur Segera Hadir",
+      text: "Login dengan Facebook sedang dalam pengembangan",
+    });
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -95,9 +133,10 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition text-sm font-medium"
+            disabled={isLoading}
+            className="w-full bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            Login
+            {isLoading ? "Loading..." : "Login"}
           </button>
 
         </form>

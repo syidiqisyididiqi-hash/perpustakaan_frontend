@@ -1,6 +1,26 @@
 import { apiFetch } from "./client";
 
 export const UsersAPI = {
+  login: (email: string, password: string) =>
+    apiFetch("/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    }),
+
+  register: (name: string, email: string, password: string) =>
+    apiFetch("/auth/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ name, email, password }),
+    }),
+
   getAll: (page = 1, search = "") =>
     apiFetch(`/users?page=${page}&search=${search}`),
 
