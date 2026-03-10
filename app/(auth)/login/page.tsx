@@ -8,57 +8,88 @@ import { UsersAPI } from "@/app/lib/api/users";
 import Swal from "sweetalert2";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const router = useRouter();
+
+  const [email,setEmail] = useState("");
+  const [password,setPassword] = useState("");
+  const [showPassword,setShowPassword] = useState(false);
+  const [isLoading,setIsLoading] = useState(false);
+
+  const handleLogin = async (e:React.FormEvent) => {
+
     e.preventDefault();
     setIsLoading(true);
 
-    try {
-      const response = await UsersAPI.login(email, password);
-      
-      // Store token dan user data
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
-      
-      await Swal.fire({
-        icon: "success",
-        title: "Login Berhasil",
-        text: "Selamat datang kembali!",
-        timer: 1500,
-        showConfirmButton: false,
+    try{
+
+      const response = await UsersAPI.login(email,password);
+
+      const data = response.data ?? response;
+
+      const token = data.access_token;
+      const user = data.user;
+
+      if(!token){
+        throw new Error("Token tidak ditemukan");
+      }
+
+      localStorage.setItem("token",token);
+
+      if(user){
+        localStorage.setItem("user",JSON.stringify(user));
+      }
+
+      const result = await Swal.fire({
+        icon:"success",
+        title:"Login Berhasil",
+        text:"Selamat datang kembali!",
+        confirmButtonText:"OK"
       });
 
-      // Route berdasarkan role user
-      if (response.data.user.role === "admin" || response.data.user.is_admin === 1) {
-        router.push("/admin");
-      } else {
-        router.push("/member");
+      if(result.isConfirmed){
+
+        if(user?.role === "admin" || user?.is_admin === 1){
+          router.push("/admin");
+        }else{
+          router.push("/member");
+        }
+
       }
-    } catch (error: any) {
+
+    }catch(error:any){
+
+      const message =
+      error?.response?.data?.message ||
+      error?.message ||
+      "Email atau password salah";
+
       await Swal.fire({
-        icon: "error",
-        title: "Login Gagal",
-        text: error.message || "Email atau password salah",
+        icon:"error",
+        title:"Login Gagal",
+        text:message,
+        confirmButtonText:"OK"
       });
-    } finally {
+
+    }finally{
       setIsLoading(false);
     }
+
   };
 
   const handleFacebookLogin = () => {
+
     Swal.fire({
-      icon: "info",
-      title: "Fitur Segera Hadir",
-      text: "Login dengan Facebook sedang dalam pengembangan",
+      icon:"info",
+      title:"Fitur Segera Hadir",
+      text:"Login dengan Facebook sedang dalam pengembangan",
+      confirmButtonText:"OK"
     });
+
   };
 
   return (
+
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
 
       <div className="bg-white shadow-md rounded-xl p-8 w-full max-w-sm border">
@@ -111,7 +142,7 @@ export default function LoginPage() {
               <Lock className="absolute left-3 top-2.5 w-4 h-4 text-gray-400"/>
 
               <input
-                type={showPassword ? "text" : "password"}
+                type={showPassword ? "text":"password"}
                 placeholder="********"
                 className="w-full pl-9 pr-9 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 value={password}
@@ -134,7 +165,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="w-full bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition text-sm font-medium disabled:bg-gray-400"
           >
             {isLoading ? "Loading..." : "Login"}
           </button>
@@ -188,5 +219,7 @@ export default function LoginPage() {
       </div>
 
     </div>
+
   );
+
 }

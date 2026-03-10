@@ -8,62 +8,89 @@ import { UsersAPI } from "@/app/lib/api/users";
 import Swal from "sweetalert2";
 
 export default function RegisterPage() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+
+  const [name,setName] = useState("");
+  const [email,setEmail] = useState("");
+  const [password,setPassword] = useState("");
+  const [confirmPassword,setConfirmPassword] = useState("");
+  const [showPassword,setShowPassword] = useState(false);
+  const [showConfirm,setShowConfirm] = useState(false);
+  const [isLoading,setIsLoading] = useState(false);
+
   const router = useRouter();
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = async (e:React.FormEvent) => {
+
     e.preventDefault();
 
-    if (password.length < 6) {
+    if(password.length < 6){
       await Swal.fire({
-        icon: "warning",
-        title: "Password Terlalu Pendek",
-        text: "Password minimal 6 karakter",
+        icon:"warning",
+        title:"Password Terlalu Pendek",
+        text:"Password minimal 6 karakter",
+        confirmButtonText:"OK"
       });
       return;
     }
 
-    if (password !== confirmPassword) {
+    if(password !== confirmPassword){
       await Swal.fire({
-        icon: "warning",
-        title: "Password Tidak Cocok",
-        text: "Password dan konfirmasi password harus sama",
+        icon:"warning",
+        title:"Password Tidak Cocok",
+        text:"Password dan konfirmasi password harus sama",
+        confirmButtonText:"OK"
       });
       return;
     }
 
     setIsLoading(true);
 
-    try {
-      const response = await UsersAPI.register(name, email, password);
+    try{
 
-      await Swal.fire({
-        icon: "success",
-        title: "Register Berhasil",
-        text: "Akun berhasil dibuat, silakan login",
-        timer: 1500,
-        showConfirmButton: false,
+      await UsersAPI.register(
+        name,
+        email,
+        password,
+        confirmPassword
+      );
+
+      const result = await Swal.fire({
+        icon:"success",
+        title:"Register Berhasil",
+        text:"Akun berhasil dibuat, silakan login",
+        confirmButtonText:"OK"
       });
 
-      router.push("/auth/login");
-    } catch (error: any) {
+      if(result.isConfirmed){
+        router.push("/login");
+      }
+
+    }catch(error:any){
+
+      let message = "Terjadi kesalahan saat registrasi";
+
+      if(error?.response?.data?.errors){
+        const errors = error.response.data.errors;
+        message = Object.values(errors).flat().join(", ");
+      }else if(error?.response?.data?.message){
+        message = error.response.data.message;
+      }
+
       await Swal.fire({
-        icon: "error",
-        title: "Register Gagal",
-        text: error.message || "Terjadi kesalahan saat registrasi",
+        icon:"error",
+        title:"Register Gagal",
+        text:message,
+        confirmButtonText:"OK"
       });
-    } finally {
+
+    }finally{
       setIsLoading(false);
     }
+
   };
 
-  return (
+  return(
+
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
 
       <div className="bg-white shadow-md rounded-xl p-8 w-full max-w-sm border">
@@ -139,7 +166,7 @@ export default function RegisterPage() {
               <Lock size={18} className="absolute left-3 top-3 text-gray-400"/>
 
               <input
-                type={showPassword ? "text" : "password"}
+                type={showPassword ? "text":"password"}
                 placeholder="********"
                 className="w-full pl-10 pr-10 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 value={password}
@@ -170,7 +197,7 @@ export default function RegisterPage() {
               <Lock size={18} className="absolute left-3 top-3 text-gray-400"/>
 
               <input
-                type={showConfirm ? "text" : "password"}
+                type={showConfirm ? "text":"password"}
                 placeholder="********"
                 className="w-full pl-10 pr-10 py-2.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 value={confirmPassword}
@@ -216,5 +243,7 @@ export default function RegisterPage() {
       </div>
 
     </div>
+
   );
+
 }

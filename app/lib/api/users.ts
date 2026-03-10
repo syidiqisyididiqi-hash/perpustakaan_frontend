@@ -11,14 +11,24 @@ export const UsersAPI = {
       body: JSON.stringify({ email, password }),
     }),
 
-  register: (name: string, email: string, password: string) =>
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    password_confirmation: string
+  ) =>
     apiFetch("/auth/register", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({
+        name,
+        email,
+        password,
+        password_confirmation,
+      }),
     }),
 
   getAll: (page = 1, search = "") =>
