@@ -28,7 +28,17 @@ export default function EditCategoryPage() {
 
   const fetchCategory = async () => {
     try {
-      const res = await fetch(`${API_URL}/${id}`);
+
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+      const res = await fetch(`${API_URL}/${id}`, {
+        headers: {
+          Accept: "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
       const data = await res.json();
       const category = data?.data ?? data;
 
@@ -52,6 +62,10 @@ export default function EditCategoryPage() {
     setLoading(true);
 
     try {
+
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
       const payload = Object.fromEntries(
         Object.entries(form).map(([k, v]) => [k, v === "" ? null : v])
       );
@@ -61,6 +75,7 @@ export default function EditCategoryPage() {
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(payload),
       });
@@ -139,7 +154,6 @@ export default function EditCategoryPage() {
     </div>
   );
 }
-
 
 function Section({ title, children }: any) {
   return (

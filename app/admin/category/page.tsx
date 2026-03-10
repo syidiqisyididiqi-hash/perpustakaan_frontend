@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { FiSearch, FiEdit, FiTrash2, FiPlus } from "react-icons/fi";
 import Link from "next/link";
 import { Alert } from "@/app/lib/alert";
+
 const API_URL = "http://127.0.0.1:8000/api/categories";
 
 type Category = {
@@ -24,8 +25,18 @@ export default function CategoryPage() {
 
   const fetchCategories = async () => {
     setLoading(true);
+
     try {
-      const res = await fetch(API_URL);
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+      const res = await fetch(API_URL, {
+        headers: {
+          Accept: "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
       const data = await res.json();
       setCategories(data?.data ?? []);
     } catch {
@@ -35,13 +46,22 @@ export default function CategoryPage() {
     }
   };
 
-    const handleDelete = async (id: number) => {
+  const handleDelete = async (id: number) => {
     const confirm = await Alert.confirmDelete();
-
     if (!confirm.isConfirmed) return;
 
     try {
-      const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+      const res = await fetch(`${API_URL}/${id}`, {
+        method: "DELETE",
+        headers: {
+          Accept: "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
@@ -50,7 +70,6 @@ export default function CategoryPage() {
       }
 
       await Alert.success("Kategori berhasil dihapus");
-
       fetchCategories();
     } catch {
       Alert.error("Terjadi kesalahan server");

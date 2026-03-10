@@ -26,6 +26,10 @@ export default function CreateCategoryPage() {
     setLoading(true);
 
     try {
+
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
       const payload = Object.fromEntries(
         Object.entries(form).map(([k, v]) => [k, v === "" ? null : v])
       );
@@ -35,6 +39,7 @@ export default function CreateCategoryPage() {
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(payload),
       });
@@ -118,7 +123,6 @@ export default function CreateCategoryPage() {
     </div>
   );
 }
-
 
 function Section({ title, children }: any) {
   return (
