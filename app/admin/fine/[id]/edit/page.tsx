@@ -29,16 +29,23 @@ export default function EditFinePage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const loanRes = await fetch(LOAN_API);
+        const token = localStorage.getItem("token"); 
+        const loanRes = await fetch(LOAN_API, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+        });
         const loanData = await loanRes.json();
+        if (loanData.status) setLoans(loanData.data);
 
-        if (loanData.status) {
-          setLoans(loanData.data);
-        }
-
-        const fineRes = await fetch(`${API_URL}/${id}`);
+        const fineRes = await fetch(`${API_URL}/${id}`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token ? `Bearer ${token}` : "",
+          },
+        });
         const fineData = await fineRes.json();
-
         if (!fineData.status) {
           Alert.error("Data denda tidak ditemukan");
           router.push("/admin/fine");
@@ -46,7 +53,6 @@ export default function EditFinePage() {
         }
 
         const fine = fineData.data;
-
         const loanId = fine.loan_detail?.loan?.id || "";
         const rackCode = fine.loan_detail?.book?.rack_code || "-";
 
@@ -89,10 +95,13 @@ export default function EditFinePage() {
     setLoading(true);
 
     try {
+      const token = localStorage.getItem("token"); 
+
       const res = await fetch(`${API_URL}/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
         },
         body: JSON.stringify({
           status: form.status,

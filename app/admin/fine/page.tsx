@@ -28,7 +28,15 @@ export default function FinePage() {
     setLoading(true);
 
     try {
-      const res = await fetch(API_URL);
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(API_URL, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+      });
+
       const data = await res.json();
 
       if (data.status) {
@@ -78,8 +86,13 @@ export default function FinePage() {
     if (!confirm.isConfirmed) return;
 
     try {
+      const token = localStorage.getItem("token"); 
       const res = await fetch(`${API_URL}/${id}`, {
         method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
       });
 
       const data = await res.json().catch(() => ({}));
@@ -96,7 +109,6 @@ export default function FinePage() {
       Alert.error("Terjadi kesalahan server");
     }
   };
-
   return (
     <div className="space-y-5">
       <div className="bg-gradient-to-r from-red-600 via-red-700 to-slate-900 rounded-2xl p-5 text-white shadow-lg">
