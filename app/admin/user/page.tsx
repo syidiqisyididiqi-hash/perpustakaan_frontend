@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { FiSearch, FiEdit, FiTrash2, FiPlus } from "react-icons/fi";
 import { Alert } from "@/app/lib/alert"; 
@@ -13,7 +13,20 @@ export default function UserPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const alertShown = useRef(false);
+
   useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+    if (!token) {
+      if (!alertShown.current) {
+        Alert.error("Gagal mengambil data user");
+        alertShown.current = true;
+      }
+      setLoading(false); 
+      return;
+    }
+
     fetchUsers();
   }, []);
 
@@ -39,7 +52,6 @@ export default function UserPage() {
 
   const handleDelete = async (id: number) => {
     const confirm = await Alert.confirmDelete();
-
     if (!confirm.isConfirmed) return;
 
     const token = localStorage.getItem("token");
@@ -61,7 +73,6 @@ export default function UserPage() {
       }
 
       await Alert.success("User berhasil dihapus");
-
       fetchUsers();
     } catch {
       Alert.error("Terjadi kesalahan server");
@@ -161,23 +172,27 @@ export default function UserPage() {
                     <td className="p-4 text-slate-600">{u.phone || "-"}</td>
 
                     <td className="p-4 text-slate-600 max-w-sm">
-                      <div className="line-clamp-2">
-                        {u.address || "-"}
-                      </div>
+                      <div className="line-clamp-2">{u.address || "-"}</div>
                     </td>
 
                     <td className="p-4 text-center">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${roleColor(u.role)}`}>
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${roleColor(
+                          u.role
+                        )}`}
+                      >
                         {u.role}
                       </span>
                     </td>
 
                     <td className="p-4 text-center">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        u.status === "active"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}>
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          u.status === "active"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
+                      >
                         {u.status === "active" ? "Aktif" : "Nonaktif"}
                       </span>
                     </td>
