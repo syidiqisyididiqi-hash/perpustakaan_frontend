@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FiSearch, FiEdit, FiTrash2, FiPlus, FiEye } from "react-icons/fi";
@@ -23,54 +23,66 @@ const formatDate = (dateString: string) => {
 
 export default function LoanPage() {
   const router = useRouter();
+
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
 
- const fetchLoans = async () => {
-  setLoading(true);
-  try {
-    const response: any = await LoansAPI.getAll();
+  const alertShown = useRef(false);
 
-    const rawData = Array.isArray(response)
-      ? response
-      : response?.data ?? [];
+  const fetchLoans = async () => {
+    setLoading(true);
 
-    const mapped = rawData.map((l: any) => {
-      const details = l?.loan_details ?? [];
+    try {
+      const response: any = await LoansAPI.getAll();
 
-      const allReturned =
-        details.length > 0 &&
-        details.every((d: any) => d?.returned_at !== null);
+      const rawData = Array.isArray(response)
+        ? response
+        : response?.data ?? [];
 
-      return {
-        id: l?.id,
-        user: l?.user?.name ?? "-",
-        loanDate: formatDate(l?.loan_date),
-        dueDate: formatDate(l?.due_date),
-        status: allReturned ? "returned" : "borrowed",
-        books:
-          details.length > 0
-            ? details
-                .map((d: any) => {
-                  const returned = d?.returned_at ? "✔" : "❌";
-                  return `${d?.book?.title ?? "-"} (Qty: ${d?.qty ?? 0}) ${returned}`;
-                })
-                .join("\n")
-            : "-",
-      };
-    });
+      const mapped = rawData.map((l: any) => {
+        const details = l?.loan_details ?? [];
 
-    setLoans(mapped);
-  } catch (error) {
-    console.error(error);
-    setLoans([]); 
-  } finally {
-    setLoading(false);
-  }
-};
+        const allReturned =
+          details.length > 0 &&
+          details.every((d: any) => d?.returned_at !== null);
+
+        return {
+          id: l?.id,
+          user: l?.user?.name ?? "-",
+          loanDate: formatDate(l?.loan_date),
+          dueDate: formatDate(l?.due_date),
+          status: allReturned ? "returned" : "borrowed",
+          books:
+            details.length > 0
+              ? details
+                  .map((d: any) => {
+                    const returned = d?.returned_at ? "✔" : "❌";
+                    return `${d?.book?.title ?? "-"} (Qty: ${
+                      d?.qty ?? 0
+                    }) ${returned}`;
+                  })
+                  .join("\n")
+              : "-",
+        };
+      });
+
+      setLoans(mapped);
+    } catch (error) {
+      console.error(error);
+
+      if (!alertShown.current) {
+        Alert.error("Gagal mengambil data pinjaman");
+        alertShown.current = true;
+      }
+
+      setLoans([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     router.refresh();
@@ -105,22 +117,30 @@ export default function LoanPage() {
   const handleToggleStatus = async (loanId: number, currentStatus: string) => {
     const isReturned = currentStatus === "returned";
     const newStatus = isReturned ? "borrowed" : "returned";
-    
+
     setUpdatingId(loanId);
-    
+
     try {
       const payload = {
-        return_date: newStatus === "returned" ? new Date().toISOString().split("T")[0] : undefined,
+        return_date:
+          newStatus === "returned"
+            ? new Date().toISOString().split("T")[0]
+            : undefined,
       };
 
       const data: any = await LoansAPI.update(loanId, payload);
-      
+
       if (!data.status) {
         Alert.error(data.message || "Gagal mengubah status");
         return;
       }
 
-      Alert.success(`Status berubah menjadi ${newStatus === "returned" ? "Sudah Dikembalikan" : "Dipinjam"}`);
+      Alert.success(
+        `Status berubah menjadi ${
+          newStatus === "returned" ? "Sudah Dikembalikan" : "Dipinjam"
+        }`
+      );
+
       fetchLoans();
     } catch (err: any) {
       Alert.error(err.message || "Gagal mengubah status");
@@ -215,11 +235,16 @@ export default function LoanPage() {
                           l.status === "returned"
                             ? "bg-green-100 text-green-700 hover:bg-green-200"
                             : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
-                        } ${updatingId === l.id ? "opacity-50 cursor-not-allowed" : ""}`}
+                        } ${
+                          updatingId === l.id
+                            ? "opacity-50 cursor-not-allowed"
+                            : ""
+                        }`}
                       >
                         {updatingId === l.id && (
                           <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
                         )}
+
                         {l.status === "returned"
                           ? "Sudah Dikembalikan"
                           : "Dipinjam"}

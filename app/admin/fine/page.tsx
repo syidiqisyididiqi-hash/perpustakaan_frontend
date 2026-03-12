@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { FiSearch, FiEdit, FiTrash2, FiPlus, FiEye } from "react-icons/fi";
 import { Alert } from "@/app/lib/alert";
@@ -22,37 +22,44 @@ export default function FinePage() {
   const [fines, setFines] = useState<Fine[]>([]);
   const [loading, setLoading] = useState(true);
 
- const fetchFines = async () => {
-  setLoading(true);
+  const alertShown = useRef(false);
 
-  try {
-    const res = await fetch(API_URL);
-    const data = await res.json();
+  const fetchFines = async () => {
+    setLoading(true);
 
-    if (data.status) {
-      const items: any[] = Array.isArray(data.data) ? data.data : [];
+    try {
+      const res = await fetch(API_URL);
+      const data = await res.json();
 
-      const mapped = items.map((f: any) => ({
-        id: f.id,
-        user: f.loan_detail?.loan?.user?.name || "-",
-        rackCode: f.loan_detail?.book?.rack_code || "-",
-        overdueDays: f.overdue_days || 0,
-        totalFine: f.total_fine || 0,
-        status: f.status || "unpaid",
-      }));
+      if (data.status) {
+        const items: any[] = Array.isArray(data.data) ? data.data : [];
 
-      setFines(mapped);
-    } else {
+        const mapped = items.map((f: any) => ({
+          id: f.id,
+          user: f.loan_detail?.loan?.user?.name || "-",
+          rackCode: f.loan_detail?.book?.rack_code || "-",
+          overdueDays: f.overdue_days || 0,
+          totalFine: f.total_fine || 0,
+          status: f.status || "unpaid",
+        }));
+
+        setFines(mapped);
+      } else {
+        setFines([]);
+      }
+    } catch (error) {
+      console.error("Fetch fines error:", error);
+
+      if (!alertShown.current) {
+        Alert.error("Gagal mengambil data denda");
+        alertShown.current = true;
+      }
+
       setFines([]);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Fetch fines error:", error);
-    Alert.error("Gagal mengambil data denda");
-    setFines([]);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   useEffect(() => {
     fetchFines();
@@ -153,6 +160,7 @@ export default function FinePage() {
                     <td className="p-4 text-center font-semibold">
                       {index + 1}
                     </td>
+
                     <td className="p-4 font-semibold">{f.user}</td>
                     <td className="p-4 text-center">{f.rackCode}</td>
                     <td className="p-4 text-center">{f.overdueDays} Hari</td>

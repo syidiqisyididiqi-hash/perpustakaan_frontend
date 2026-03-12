@@ -10,6 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { Alert } from "@/app/lib/alert";
 
 const API = {
   users: "http://127.0.0.1:8000/api/users",
@@ -28,20 +29,34 @@ export default function AdminPage() {
     fines: 0,
   });
 
-  const [chartData, setChartData] = useState<{ month: string; count: number }[]>([]);
+  const [chartData, setChartData] = useState<
+    { month: string; count: number }[]
+  >([]);
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-
     const token = localStorage.getItem("token");
 
-    const fetchWithAuth = (url: string) => {
-      return fetch(url, {
+    if (!token) {
+      Alert.error("Gagal mengambil data");
+      setLoading(false);
+      return;
+    }
+
+    const fetchWithAuth = async (url: string) => {
+      const res = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/json",
         },
-      }).then((r) => r.json());
+      });
+
+      if (!res.ok) {
+        throw new Error("Unauthorized");
+      }
+
+      return res.json();
     };
 
     const fetchData = async () => {
@@ -55,20 +70,22 @@ export default function AdminPage() {
         ]);
 
         setStats({
-          users: users.data.length,
-          categories: categories.data.length,
-          books: books.data.length,
-          loans: loans.data.length,
-          fines: fines.data.length,
+          users: users.data?.length || 0,
+          categories: categories.data?.length || 0,
+          books: books.data?.length || 0,
+          loans: loans.data?.length || 0,
+          fines: fines.data?.length || 0,
         });
 
         const countByMonth: Record<string, number> = {};
-        loans.data.forEach((l: any) => {
+
+        loans.data?.forEach((l: any) => {
           const d = new Date(l.loan_date);
           const key = d.toLocaleString("default", {
             month: "short",
             year: "numeric",
           });
+
           countByMonth[key] = (countByMonth[key] || 0) + 1;
         });
 
@@ -80,6 +97,7 @@ export default function AdminPage() {
         setChartData(chart);
       } catch (err) {
         console.error(err);
+        Alert.error("Gagal mengambil data");
       } finally {
         setLoading(false);
       }
@@ -90,15 +108,12 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 p-10 space-y-10">
-
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold text-slate-900 tracking-tight">
             Dashboard
           </h1>
-          <p className="text-slate-500 mt-2">
-            Welcome back, Admin 👋
-          </p>
+          <p className="text-slate-500 mt-2">Welcome back, Admin 👋</p>
         </div>
 
         <div className="bg-white shadow rounded-xl px-6 py-3 border">
@@ -110,7 +125,6 @@ export default function AdminPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-
         <StatCard
           title="Total Users"
           value={stats.users}
@@ -142,11 +156,11 @@ export default function AdminPage() {
           loading={loading}
           color="from-orange-500 to-red-500"
         />
-
       </div>
 
       <div className="bg-white rounded-3xl shadow-lg p-6">
         <h2 className="text-xl font-semibold mb-4">Peminjaman per Bulan</h2>
+
         <ResponsiveContainer width="100%" height={250}>
           <BarChart data={chartData}>
             <XAxis dataKey="month" />
@@ -165,11 +179,10 @@ export default function AdminPage() {
         </h3>
 
         <p className="opacity-80 mt-3 max-w-xl">
-          No issues detected. Your library system is performing
-          optimally with stable loan activity and healthy user engagement.
+          No issues detected. Your library system is performing optimally with
+          stable loan activity and healthy user engagement.
         </p>
       </div>
-
     </div>
   );
 }
@@ -192,6 +205,7 @@ function StatCard({
       <div
         className={`absolute inset-0 opacity-0 group-hover:opacity-20 bg-gradient-to-br ${color} transition`}
       />
+
       <div className="flex items-center justify-between">
         <div>
           <p className="text-slate-500 text-sm">{title}</p>
@@ -199,9 +213,7 @@ function StatCard({
           {loading ? (
             <div className="h-8 w-20 bg-slate-200 animate-pulse rounded mt-3" />
           ) : (
-            <h3 className="text-4xl font-bold text-slate-900 mt-2">
-              {value}
-            </h3>
+            <h3 className="text-4xl font-bold text-slate-900 mt-2">{value}</h3>
           )}
         </div>
 
