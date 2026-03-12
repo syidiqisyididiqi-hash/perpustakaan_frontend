@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { FiSearch, FiEdit, FiTrash2, FiPlus } from "react-icons/fi";
 import { Alert } from "@/app/lib/alert";
@@ -26,7 +26,20 @@ export default function BookPage() {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const alertShown = useRef(false);
+
   useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+    if (!token) {
+      if (!alertShown.current) {
+        Alert.error("Gagal mengambil data buku");
+        alertShown.current = true;
+      }
+      setLoading(false); 
+      return;
+    }
+
     fetchBooks();
   }, []);
 
