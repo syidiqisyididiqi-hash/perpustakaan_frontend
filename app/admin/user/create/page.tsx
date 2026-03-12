@@ -43,6 +43,8 @@ export default function CreateUserPage() {
     e.preventDefault();
     setLoading(true);
 
+    const token = localStorage.getItem("token");
+
     try {
       const payload = Object.fromEntries(
         Object.entries(form).map(([k, v]) => [k, v === "" ? null : v])
@@ -51,6 +53,7 @@ export default function CreateUserPage() {
       const res = await fetch(API_URL, {
         method: "POST",
         headers: {
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
           Accept: "application/json",
         },
@@ -151,6 +154,7 @@ export default function CreateUserPage() {
     </div>
   );
 }
+
 function Section({ title, children }: any) {
   return (
     <div className="space-y-4">

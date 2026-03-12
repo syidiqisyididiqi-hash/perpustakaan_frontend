@@ -44,8 +44,17 @@ export default function EditUserPage() {
   }, [id]);
 
   const fetchUser = async () => {
+
+    const token = localStorage.getItem("token");
+
     try {
-      const res = await fetch(`${API_URL}/${id}`);
+      const res = await fetch(`${API_URL}/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
+
       const data = await res.json();
       const user = data.data ?? data;
 
@@ -74,6 +83,8 @@ export default function EditUserPage() {
     e.preventDefault();
     setLoading(true);
 
+    const token = localStorage.getItem("token");
+
     try {
       const payload: any = Object.fromEntries(
         Object.entries(form).map(([k, v]) => [k, v === "" ? null : v])
@@ -84,6 +95,7 @@ export default function EditUserPage() {
       const res = await fetch(`${API_URL}/${id}`, {
         method: "PUT",
         headers: {
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
           Accept: "application/json",
         },

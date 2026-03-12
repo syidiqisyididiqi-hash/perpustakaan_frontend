@@ -19,8 +19,17 @@ export default function UserPage() {
 
   const fetchUsers = async () => {
     setLoading(true);
+
+    const token = localStorage.getItem("token");
+
     try {
-      const res = await fetch(API_URL);
+      const res = await fetch(API_URL, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
+
       const data = await res.json();
       setUsers(data.data ?? data);
     } finally {
@@ -33,8 +42,17 @@ export default function UserPage() {
 
     if (!confirm.isConfirmed) return;
 
+    const token = localStorage.getItem("token");
+
     try {
-      const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+      const res = await fetch(`${API_URL}/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
+
       const data = await res.json();
 
       if (!res.ok || !data.status) {
