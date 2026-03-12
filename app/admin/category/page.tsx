@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FiSearch, FiEdit, FiTrash2, FiPlus } from "react-icons/fi";
 import Link from "next/link";
 import { Alert } from "@/app/lib/alert";
@@ -19,7 +19,20 @@ export default function CategoryPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const alertShown = useRef(false);
+
   useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+    if (!token) {
+      if (!alertShown.current) {
+        Alert.error("Gagal mengambil data kategori");
+        alertShown.current = true;
+      }
+      setLoading(false); 
+      return;
+    }
+
     fetchCategories();
   }, []);
 
