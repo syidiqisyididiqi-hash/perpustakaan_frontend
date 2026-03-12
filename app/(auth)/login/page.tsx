@@ -16,76 +16,68 @@ export default function LoginPage() {
   const [showPassword,setShowPassword] = useState(false);
   const [isLoading,setIsLoading] = useState(false);
 
-  const handleLogin = async (e:React.FormEvent) => {
-
+   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    try{
+    try {
+      
+      localStorage.clear();
 
-      const response = await UsersAPI.login(email,password);
-
+      const response = await UsersAPI.login(email, password);
       const data = response.data ?? response;
 
       const token = data.access_token;
       const user = data.user;
 
-      if(!token){
+      if (!token) {
         throw new Error("Token tidak ditemukan");
       }
 
-      localStorage.setItem("token",token);
+      localStorage.setItem("token", token);
 
-      if(user){
-        localStorage.setItem("user",JSON.stringify(user));
+      if (user) {
+        localStorage.setItem("user", JSON.stringify(user));
       }
 
       const result = await Swal.fire({
-        icon:"success",
-        title:"Login Berhasil",
-        text:"Selamat datang kembali!",
-        confirmButtonText:"OK"
+        icon: "success",
+        title: "Login Berhasil",
+        text: "Selamat datang kembali!",
+        confirmButtonText: "OK",
       });
 
-      if(result.isConfirmed){
-
-        if(user?.role === "admin" || user?.is_admin === 1){
+      if (result.isConfirmed) {
+        if (user?.role === "admin" || user?.is_admin === 1) {
           router.push("/admin");
-        }else{
+        } else {
           router.push("/member");
         }
-
       }
-
-    }catch(error:any){
-
+    } catch (error: any) {
       const message =
-      error?.response?.data?.message ||
-      error?.message ||
-      "Email atau password salah";
+        error?.response?.data?.message ||
+        error?.message ||
+        "Email atau password salah";
 
       await Swal.fire({
-        icon:"error",
-        title:"Login Gagal",
-        text:message,
-        confirmButtonText:"OK"
+        icon: "error",
+        title: "Login Gagal",
+        text: message,
+        confirmButtonText: "OK",
       });
-
-    }finally{
+    } finally {
       setIsLoading(false);
     }
-
   };
 
   const handleFacebookLogin = () => {
-
     Swal.fire({
-      icon:"info",
-      title:"Fitur Segera Hadir",
-      text:"Login dengan Facebook sedang dalam pengembangan",
-      confirmButtonText:"OK"
+      icon: "info",
+      title: "Fitur Segera Hadir",
+      text: "Login dengan Facebook sedang dalam pengembangan",
+      confirmButtonText: "OK",
     });
-
   };
 
   return (
