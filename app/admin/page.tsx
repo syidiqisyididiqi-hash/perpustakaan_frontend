@@ -11,7 +11,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-
 const API = {
   users: "http://127.0.0.1:8000/api/users",
   categories: "http://127.0.0.1:8000/api/categories",
@@ -29,18 +28,30 @@ export default function AdminPage() {
     fines: 0,
   });
 
-  const [chartData, setChartData] = useState<{month:string;count:number}[]>([]);
+  const [chartData, setChartData] = useState<{ month: string; count: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+
+    const token = localStorage.getItem("token");
+
+    const fetchWithAuth = (url: string) => {
+      return fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      }).then((r) => r.json());
+    };
+
     const fetchData = async () => {
       try {
         const [users, categories, books, loans, fines] = await Promise.all([
-          fetch(API.users).then((r) => r.json()),
-          fetch(API.categories).then((r) => r.json()),
-          fetch(API.books).then((r) => r.json()),
-          fetch(API.loans).then((r) => r.json()),
-          fetch(API.fines).then((r) => r.json()),
+          fetchWithAuth(API.users),
+          fetchWithAuth(API.categories),
+          fetchWithAuth(API.books),
+          fetchWithAuth(API.loans),
+          fetchWithAuth(API.fines),
         ]);
 
         setStats({
@@ -60,10 +71,12 @@ export default function AdminPage() {
           });
           countByMonth[key] = (countByMonth[key] || 0) + 1;
         });
+
         const chart = Object.entries(countByMonth).map(([month, count]) => ({
           month,
           count,
         }));
+
         setChartData(chart);
       } catch (err) {
         console.error(err);
