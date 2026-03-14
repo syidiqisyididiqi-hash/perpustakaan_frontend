@@ -27,10 +27,20 @@ export default function MemberBooksPage() {
 
   const fetchBooks = async () => {
     try {
-      const res = await fetch(API_URL);
+
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(API_URL, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       const data = await res.json();
 
       setBooks(data.data ?? []);
+
     } catch (error) {
       console.error("Gagal mengambil data buku");
     } finally {

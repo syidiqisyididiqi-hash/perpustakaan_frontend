@@ -21,6 +21,7 @@ type Book = {
 };
 
 export default function BookDetailPage() {
+
   const { id } = useParams();
   const router = useRouter();
 
@@ -34,29 +35,54 @@ export default function BookDetailPage() {
   });
 
   useEffect(() => {
-    fetchBook();
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+
+    fetchBook(token);
+
   }, []);
 
-  const fetchBook = async () => {
+  const fetchBook = async (token: string) => {
+
     try {
-      const res = await fetch(`${API_URL}/${id}`);
+
+      const res = await fetch(`${API_URL}/${id}`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       const data = await res.json();
+
       setBook(data.data ?? data);
+
     } catch {
       console.error("Gagal mengambil detail buku");
     } finally {
       setLoading(false);
     }
+
   };
 
   const handleBorrow = async (e: any) => {
+
     e.preventDefault();
 
     try {
+
+      const token = localStorage.getItem("token");
+
       const res = await fetch(LOAN_API, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           book_id: book?.id,
@@ -73,11 +99,17 @@ export default function BookDetailPage() {
       }
 
       alert("Buku berhasil dipinjam!");
+
       setShowBorrow(false);
 
+      fetchBook(token || "");
+
     } catch {
+
       alert("Terjadi kesalahan server");
+
     }
+
   };
 
   if (loading) {
@@ -115,6 +147,7 @@ export default function BookDetailPage() {
         />
 
         <div className="flex flex-col">
+
           <h1 className="text-3xl font-bold mb-3">
             {book.title}
           </h1>
@@ -146,6 +179,7 @@ export default function BookDetailPage() {
           </button>
 
           {showBorrow && (
+
             <form
               onSubmit={handleBorrow}
               className="mt-6 space-y-4 border-t pt-6"
@@ -156,27 +190,43 @@ export default function BookDetailPage() {
               </h2>
 
               <div>
-                <label className="text-sm">Tanggal Pinjam</label>
+
+                <label className="text-sm">
+                  Tanggal Pinjam
+                </label>
+
                 <input
                   type="date"
                   required
                   className="w-full border rounded-lg p-2"
                   onChange={(e) =>
-                    setForm({ ...form, borrow_date: e.target.value })
+                    setForm({
+                      ...form,
+                      borrow_date: e.target.value,
+                    })
                   }
                 />
+
               </div>
 
               <div>
-                <label className="text-sm">Tanggal Kembali</label>
+
+                <label className="text-sm">
+                  Tanggal Kembali
+                </label>
+
                 <input
                   type="date"
                   required
                   className="w-full border rounded-lg p-2"
                   onChange={(e) =>
-                    setForm({ ...form, return_date: e.target.value })
+                    setForm({
+                      ...form,
+                      return_date: e.target.value,
+                    })
                   }
                 />
+
               </div>
 
               <div className="flex gap-3">
@@ -199,10 +249,13 @@ export default function BookDetailPage() {
               </div>
 
             </form>
+
           )}
 
         </div>
+
       </div>
+
     </div>
   );
 }
