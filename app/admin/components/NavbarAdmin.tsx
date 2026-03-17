@@ -19,6 +19,7 @@ import AdminProfileDropdown from "./profile/AdminProfileDropdown";
 
 export default function NavbarAdmin() {
   const [isOpen, setIsOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -93,7 +94,15 @@ export default function NavbarAdmin() {
       </nav>
 
       <div className="mt-6 mb-4 px-2">
-        <AdminProfileDropdown />
+        <button
+          onClick={() => setProfileOpen(true)}
+          className="flex items-center gap-3 bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-xl w-full transition font-medium text-left"
+        >
+          <div className="w-9 h-9 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm">
+            P
+          </div>
+          <span className="text-white text-sm truncate">Profile</span>
+        </button>
       </div>
 
       <button
@@ -142,6 +151,11 @@ export default function NavbarAdmin() {
       <aside className="hidden md:flex md:w-64 bg-slate-900 text-slate-200 shadow-xl fixed inset-y-0 left-0 z-30 border-r border-slate-800">
         <SidebarContent />
       </aside>
+
+      <AdminProfileDropdown
+        open={profileOpen}
+        onClose={() => setProfileOpen(false)}
+      />
     </>
   );
 }
