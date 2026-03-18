@@ -77,6 +77,12 @@ export default function BookDetailPage() {
     try {
 
       const token = localStorage.getItem("token");
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+      if (!user.id) {
+        alert("User tidak ditemukan, silakan login ulang");
+        return;
+      }
 
       const res = await fetch(LOAN_API, {
         method: "POST",
@@ -85,9 +91,14 @@ export default function BookDetailPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          book_id: book?.id,
-          borrow_date: form.borrow_date,
-          return_date: form.return_date,
+          user_id: user.id,
+          loan_date: form.borrow_date,
+          due_date: form.return_date,
+          details: [{
+            book_id: book?.id,
+            qty: 1,
+            rack_code: book?.rack_code || "",
+          }],
         }),
       });
 
@@ -103,6 +114,11 @@ export default function BookDetailPage() {
       setShowBorrow(false);
 
       fetchBook(token || "");
+
+      setForm({
+        borrow_date: "",
+        return_date: "",
+      });
 
     } catch {
 
