@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FiUsers, FiBook, FiDollarSign } from "react-icons/fi";
+import { FiUsers, FiBook, FiDollarSign, FiLayers } from "react-icons/fi";
 import {
   BarChart,
   Bar,
@@ -9,6 +9,7 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  CartesianGrid,
 } from "recharts";
 import { Alert } from "@/app/lib/alert";
 
@@ -22,24 +23,24 @@ const API = {
 
 export default function AdminPage() {
   const [stats, setStats] = useState({
-    users: 0,
-    categories: 0,
+    admins: 0,
+    members: 0,
     books: 0,
+    categories: 0,
     loans: 0,
+    activeLoans: 0,
     fines: 0,
   });
 
-  const [chartData, setChartData] = useState<
-    { month: string; count: number }[]
-  >([]);
-
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [recentLoans, setRecentLoans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
 
     if (!token) {
-      Alert.error("Gagal mengambil data");
+      Alert.error("Unauthorized");
       setLoading(false);
       return;
     }
@@ -52,10 +53,7 @@ export default function AdminPage() {
         },
       });
 
-      if (!res.ok) {
-        throw new Error("Unauthorized");
-      }
-
+      if (!res.ok) throw new Error("Unauthorized");
       return res.json();
     };
 
@@ -69,35 +67,51 @@ export default function AdminPage() {
           fetchWithAuth(API.fines),
         ]);
 
+        const userList = users.data || [];
+        const loanList = loans.data || [];
+        const fineList = fines.data || [];
+
+        const admins = userList.filter((u: any) =>
+          u.role?.toLowerCase() === "admin" || u.is_admin === true
+        ).length;
+
+        const members = userList.length - admins;
+
+        const returnedLoans = loanList.filter((l: any) =>
+          l.status?.toLowerCase() === "returned" || l.returned_at
+        ).length;
+
+        const activeLoans = loanList.length - returnedLoans;
+
+        const paidFines = fineList.filter((f: any) =>
+          f.is_paid || f.status?.toLowerCase() === "paid"
+        ).length;
+
+        const unpaidFines = fineList.length - paidFines;
+
         setStats({
-          users: users.data?.length || 0,
-          categories: categories.data?.length || 0,
+          admins,
+          members,
           books: books.data?.length || 0,
-          loans: loans.data?.length || 0,
-          fines: fines.data?.length || 0,
+          categories: categories.data?.length || 0,
+          loans: loanList.length,
+          activeLoans,
+          fines: fineList.length,
         });
 
-        const countByMonth: Record<string, number> = {};
+        setChartData([
+          { label: "Admin", value: admins },
+          { label: "Member", value: members },
+          { label: "Buku", value: books.data?.length || 0 },
+          { label: "Dipinjam", value: activeLoans },
+          { label: "Kembali", value: returnedLoans },
+          { label: "Denda Belum", value: unpaidFines },
+          { label: "Denda Lunas", value: paidFines },
+        ]);
 
-        loans.data?.forEach((l: any) => {
-          const d = new Date(l.loan_date);
-          const key = d.toLocaleString("default", {
-            month: "short",
-            year: "numeric",
-          });
-
-          countByMonth[key] = (countByMonth[key] || 0) + 1;
-        });
-
-        const chart = Object.entries(countByMonth).map(([month, count]) => ({
-          month,
-          count,
-        }));
-
-        setChartData(chart);
+        setRecentLoans(loanList.slice(0, 5));
       } catch (err) {
-        console.error(err);
-        Alert.error("Gagal mengambil data");
+        Alert.error("Gagal ambil data");
       } finally {
         setLoading(false);
       }
@@ -107,122 +121,70 @@ export default function AdminPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 p-10 space-y-10">
-      <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-slate-50 p-8 space-y-8">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-4xl font-bold text-slate-900 tracking-tight">
-            Dashboard
-          </h1>
-          <p className="text-slate-500 mt-2">Welcome back, Admin 👋</p>
+          <h1 className="text-3xl font-bold">Admin Dashboard Perpustakaan</h1>
+          <p className="text-slate-500">Monitoring sistem perpustakaan</p>
         </div>
-
-        <div className="bg-white shadow rounded-xl px-6 py-3 border">
-          <p className="text-sm text-slate-500">System Status</p>
-          <p className="text-green-600 font-semibold">
-            ● All Systems Operational
-          </p>
+        <div className="bg-white px-4 py-2 rounded-xl shadow text-green-600">
+          ● System Normal
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-        <StatCard
-          title="Total Users"
-          value={stats.users}
-          icon={<FiUsers />}
-          loading={loading}
-          color="from-blue-500 to-indigo-500"
-        />
-
-        <StatCard
-          title="Books"
-          value={stats.books}
-          icon={<FiBook />}
-          loading={loading}
-          color="from-purple-500 to-pink-500"
-        />
-
-        <StatCard
-          title="Active Loans"
-          value={stats.loans}
-          icon={<FiBook />}
-          loading={loading}
-          color="from-emerald-500 to-teal-500"
-        />
-
-        <StatCard
-          title="Total Fines"
-          value={stats.fines}
-          icon={<FiDollarSign />}
-          loading={loading}
-          color="from-orange-500 to-red-500"
-        />
+      <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-6">
+        <Stat title="Admin" value={stats.admins} icon={<FiUsers />} />
+        <Stat title="Member" value={stats.members} icon={<FiUsers />} />
+        <Stat title="Buku" value={stats.books} icon={<FiBook />} />
+        <Stat title="Kategori" value={stats.categories} icon={<FiLayers />} />
+        <Stat title="Pinjaman" value={stats.loans} icon={<FiBook />} />
+        <Stat title="Denda" value={stats.fines} icon={<FiDollarSign />} />
       </div>
 
-      <div className="bg-white rounded-3xl shadow-lg p-6">
-        <h2 className="text-xl font-semibold mb-4">Peminjaman per Bulan</h2>
-
-        <ResponsiveContainer width="100%" height={250}>
-          <BarChart data={chartData}>
-            <XAxis dataKey="month" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="count" fill="#8884d8" />
-          </BarChart>
-        </ResponsiveContainer>
+      <div className="bg-white p-6 rounded-2xl shadow">
+        <h2 className="font-semibold mb-4">Statistik</h2>
+        {loading ? (
+          <div className="h-60 bg-slate-200 animate-pulse" />
+        ) : (
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="label" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="value" fill="#6366f1" />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
-      <div className="rounded-3xl p-10 bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-2xl">
-        <p className="opacity-80 text-sm">Library Summary</p>
-
-        <h3 className="text-4xl font-bold mt-3">
-          Everything Running Smoothly 🚀
-        </h3>
-
-        <p className="opacity-80 mt-3 max-w-xl">
-          No issues detected. Your library system is performing optimally with
-          stable loan activity and healthy user engagement.
-        </p>
+      <div className="grid md:grid-cols-3 gap-6">
+        <Box title="Pinjaman Aktif" value={stats.activeLoans} color="text-blue-600" />
+        <Box title="Sudah Kembali" value={chartData.find(d=>d.label==='Kembali')?.value||0} color="text-green-600" />
+        <Box title="Denda Belum Bayar" value={chartData.find(d=>d.label==='Denda Belum')?.value||0} color="text-red-600" />
       </div>
+
     </div>
   );
 }
 
-function StatCard({
-  title,
-  value,
-  icon,
-  loading,
-  color,
-}: {
-  title: string;
-  value: number;
-  icon: React.ReactNode;
-  loading: boolean;
-  color: string;
-}) {
+function Stat({ title, value, icon }: any) {
   return (
-    <div className="relative group rounded-3xl overflow-hidden shadow-lg border bg-white p-7 transition hover:scale-[1.03]">
-      <div
-        className={`absolute inset-0 opacity-0 group-hover:opacity-20 bg-gradient-to-br ${color} transition`}
-      />
-
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-slate-500 text-sm">{title}</p>
-
-          {loading ? (
-            <div className="h-8 w-20 bg-slate-200 animate-pulse rounded mt-3" />
-          ) : (
-            <h3 className="text-4xl font-bold text-slate-900 mt-2">{value}</h3>
-          )}
-        </div>
-
-        <div
-          className={`p-4 rounded-2xl text-white bg-gradient-to-br ${color} shadow-lg`}
-        >
-          {icon}
-        </div>
+    <div className="bg-white p-4 rounded-xl shadow flex justify-between items-center">
+      <div>
+        <p className="text-sm text-slate-500">{title}</p>
+        <h3 className="text-xl font-bold">{value}</h3>
       </div>
+      <div className="text-xl">{icon}</div>
+    </div>
+  );
+}
+
+function Box({ title, value, color }: any) {
+  return (
+    <div className="bg-white p-6 rounded-xl shadow">
+      <p className="text-sm text-slate-500">{title}</p>
+      <h3 className={`text-2xl font-bold mt-2 ${color}`}>{value}</h3>
     </div>
   );
 }
