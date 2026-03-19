@@ -126,11 +126,11 @@ export default function MemberNavbar() {
                       <FiUser size={16} /> Profile
                     </button>
 
-                    <Link href="/member/guide" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-sm">
+                    <Link href="/member/panduan" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-sm">
                       <FiBookOpen size={16} /> Panduan
                     </Link>
 
-                    <Link href="/member/help" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-sm">
+                    <Link href="/member/bantuan" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-sm">
                       <FiHelpCircle size={16} /> Bantuan
                     </Link>
 
@@ -188,11 +188,11 @@ export default function MemberNavbar() {
               Profile
             </button>
 
-            <Link href="/member/guide" className="block text-gray-600">
+            <Link href="/member/panduan" className="block text-gray-600">
               Panduan
             </Link>
 
-            <Link href="/member/help" className="block text-gray-600">
+            <Link href="/member/bantuan" className="block text-gray-600">
               Bantuan
             </Link>
 
