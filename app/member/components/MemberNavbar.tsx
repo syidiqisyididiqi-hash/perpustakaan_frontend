@@ -61,6 +61,8 @@ export default function MemberNavbar() {
     { name: "Dashboard", path: "/member" },
     { name: "Books", path: "/member/books" },
     { name: "History", path: "/member/history" },
+    { name: "Panduan", path: "/member/panduan" },
+    { name: "Bantuan", path: "/member/bantuan" },
   ];
 
   useEffect(() => {
@@ -187,14 +189,6 @@ export default function MemberNavbar() {
             >
               Profile
             </button>
-
-            <Link href="/member/panduan" className="block text-gray-600">
-              Panduan
-            </Link>
-
-            <Link href="/member/bantuan" className="block text-gray-600">
-              Bantuan
-            </Link>
 
             <button
               onClick={() => {
