@@ -22,182 +22,207 @@ export default function MemberNavbar() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
 
-  const profileRef = useRef<any>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   const isLoggedIn = true;
 
+  const mainMenus = [
+    { name: "Dashboard", path: "/member" },
+    { name: "Books", path: "/member/books" },
+    { name: "History", path: "/member/history" },
+  ];
+
   const handleLogout = () => {
     Swal.fire({
-      title: "Apakah kamu yakin?",
-      text: "Kamu akan keluar dari sesi member ini!",
+      title: "Logout?",
+      text: "Kamu akan keluar dari akun ini",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Ya, Logout!",
+      confirmButtonColor: "#10b981",
+      cancelButtonColor: "#ef4444",
+      confirmButtonText: "Logout",
       cancelButtonText: "Batal",
-      background: "#1e293b",
+      background: "#0f172a",
       color: "#fff",
     }).then((result) => {
       if (result.isConfirmed) {
         localStorage.clear();
         Swal.fire({
-          title: "Logged Out!",
-          text: "Berhasil keluar.",
+          title: "Berhasil logout",
           icon: "success",
-          timer: 1500,
+          timer: 1200,
           showConfirmButton: false,
-          background: "#1e293b",
+          background: "#0f172a",
           color: "#fff",
         });
         setTimeout(() => {
           router.push("/login");
-        }, 1500);
+        }, 1200);
       }
     });
   };
 
-  const menus = [
-    { name: "Dashboard", path: "/member" },
-    { name: "Books", path: "/member/books" },
-    { name: "History", path: "/member/history" },
-    { name: "Panduan", path: "/member/panduan" },
-    { name: "Bantuan", path: "/member/bantuan" },
-  ];
-
   useEffect(() => {
-    const handleClickOutside = (e: any) => {
-      if (profileRef.current && !profileRef.current.contains(e.target)) {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
         setProfileOpen(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   return (
     <>
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/70 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
+          
+          <Link href="/member" className="flex items-center gap-2 group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-500 flex items-center justify-center text-white font-bold shadow-md group-hover:scale-105 transition">
+              P
+            </div>
+            <h1 className="text-lg font-bold text-slate-800 tracking-tight">
+              Perpustakaan
+            </h1>
+          </Link>
 
-          <h1 className="text-lg md:text-xl font-semibold bg-gradient-to-r from-green-700 to-emerald-500 bg-clip-text text-transparent">
-            Perpustakaan
-          </h1>
-
-          <nav className="hidden md:flex items-center gap-8 font-medium">
-            {menus.map((menu) => (
-              <Link
-                key={menu.path}
-                href={menu.path}
-                className={`relative ${
-                  pathname === menu.path
-                    ? "text-green-700"
-                    : "text-gray-600 hover:text-green-600"
-                }`}
-              >
-                {menu.name}
-
-                {pathname === menu.path && (
-                  <span className="absolute -bottom-2 left-0 w-full h-[3px] bg-green-600 rounded-full" />
-                )}
-              </Link>
-            ))}
+          <nav className="hidden md:flex items-center gap-2">
+            {mainMenus.map((menu) => {
+              const active = pathname === menu.path;
+              return (
+                <Link
+                  key={menu.path}
+                  href={menu.path}
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                    active
+                      ? "bg-indigo-50 text-indigo-700"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  }`}
+                >
+                  {menu.name}
+                </Link>
+              );
+            })}
           </nav>
 
-          <div className="hidden md:flex items-center gap-4 relative" ref={profileRef}>
+          <div className="hidden md:flex items-center gap-3 relative" ref={profileRef}>
             {isLoggedIn && (
               <>
                 <button
                   onClick={() => setProfileOpen(!profileOpen)}
-                  className="w-10 h-10 rounded-full bg-gradient-to-br from-green-600 to-emerald-500 text-white flex items-center justify-center"
+                  className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center border border-slate-200 shadow-sm hover:bg-indigo-600 hover:text-white transition-all"
                 >
                   <FiUser size={18} />
                 </button>
 
-                {profileOpen && (
-                  <div className="absolute right-0 top-14 w-52 bg-white rounded-2xl shadow-xl border z-50 overflow-hidden animate-fadeIn">
+                <div
+                  className={`absolute right-0 top-14 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 transition-all duration-200 origin-top-right ${
+                    profileOpen
+                      ? "opacity-100 scale-100 translate-y-0 visible"
+                      : "opacity-0 scale-95 -translate-y-2 invisible"
+                  }`}
+                >
+                  <div className="p-4 border-b">
+                    <p className="text-sm font-bold text-slate-800 leading-none">Member Name</p>
+                    <p className="text-xs text-slate-400 mt-1">member@email.com</p>
+                  </div>
 
+                  <div className="p-1.5">
                     <button
                       onClick={() => {
                         setProfileModalOpen(true);
                         setProfileOpen(false);
                       }}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-sm w-full text-left"
+                      className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 text-sm font-medium text-slate-700 w-full rounded-xl transition"
                     >
-                      <FiUser size={16} /> Profile
+                      <FiUser className="text-slate-400" size={16} /> Profile
                     </button>
 
-                    <Link href="/member/panduan" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-sm">
-                      <FiBookOpen size={16} /> Panduan
+                    <Link
+                      href="/member/panduan"
+                      className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 text-sm font-medium text-slate-700 rounded-xl transition"
+                    >
+                      <FiBookOpen className="text-slate-400" size={16} /> Panduan
                     </Link>
 
-                    <Link href="/member/bantuan" className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-sm">
-                      <FiHelpCircle size={16} /> Bantuan
+                    <Link
+                      href="/member/bantuan"
+                      className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 text-sm font-medium text-slate-700 rounded-xl transition"
+                    >
+                      <FiHelpCircle className="text-slate-400" size={16} /> Bantuan
                     </Link>
 
-                    <div className="border-t"></div>
+                    <div className="my-1 border-t border-slate-100"></div>
 
                     <button
                       onClick={handleLogout}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-sm w-full text-left text-red-600"
+                      className="flex items-center gap-3 px-3 py-2.5 hover:bg-red-50 text-sm font-bold w-full text-red-600 rounded-xl transition"
                     >
                       <FiLogOut size={16} /> Logout
                     </button>
-
                   </div>
-                )}
+                </div>
               </>
             )}
           </div>
 
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="md:hidden text-2xl"
+            className="md:hidden w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-600 border border-slate-100"
           >
-            {menuOpen ? <FiX /> : <FiMenu />}
+            {menuOpen ? <FiX size={20} /> : <FiMenu size={20} />}
           </button>
         </div>
 
         <div
-          className={`md:hidden transition-all duration-300 overflow-hidden ${
-            menuOpen ? "max-h-[400px] py-5" : "max-h-0"
-          } bg-white border-t px-6`}
+          className={`md:hidden transition-all duration-300 ease-in-out ${
+            menuOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
+          } overflow-hidden bg-white border-t px-4`}
         >
-          {menus.map((menu) => (
-            <Link
-              key={menu.path}
-              href={menu.path}
-              onClick={() => setMenuOpen(false)}
-              className={`block py-2 ${
-                pathname === menu.path
-                  ? "text-green-700"
-                  : "text-gray-600"
-              }`}
-            >
-              {menu.name}
-            </Link>
-          ))}
+          <div className="py-4 space-y-1">
+            <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Main Menu</p>
+            {mainMenus.map((menu) => (
+              <Link
+                key={menu.path}
+                href={menu.path}
+                onClick={() => setMenuOpen(false)}
+                className={`block px-3 py-2.5 rounded-xl text-sm font-semibold ${
+                  pathname === menu.path
+                    ? "bg-indigo-50 text-indigo-700"
+                    : "text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                {menu.name}
+              </Link>
+            ))}
+          </div>
 
-          <div className="border-t mt-4 pt-4 space-y-2">
+          <div className="border-t pt-4 pb-6 space-y-1">
+            <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Account</p>
             <button
               onClick={() => {
                 setProfileModalOpen(true);
                 setMenuOpen(false);
               }}
-              className="block w-full text-left text-gray-700"
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-slate-50 text-sm font-semibold text-slate-600"
             >
-              Profile
+              <FiUser size={18} /> Profile
             </button>
-
+            <Link
+              href="/member/panduan"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 text-sm font-semibold text-slate-600"
+            >
+              <FiBookOpen size={18} /> Panduan
+            </Link>
             <button
               onClick={() => {
                 handleLogout();
                 setMenuOpen(false);
               }}
-              className="flex items-center gap-2 text-red-600 mt-2"
+              className="flex items-center gap-3 text-red-600 px-3 py-2.5 rounded-xl hover:bg-red-50 text-sm font-bold w-full"
             >
-              <FiLogOut /> Logout
+              <FiLogOut size={18} /> Logout
             </button>
           </div>
         </div>
