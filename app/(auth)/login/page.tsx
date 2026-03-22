@@ -29,6 +29,8 @@ export default function LoginPage() {
       const token = data.access_token;
       const user = data.user;
 
+      
+
       if (!token) {
         throw new Error("Token tidak ditemukan");
       }
@@ -158,14 +160,17 @@ export default function LoginPage() {
             <div className="flex-1 h-px bg-gray-300"/>
           </div>
 
-          <button className="w-full border py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 transition text-sm mb-2">
-            <img
-              src="https://www.svgrepo.com/show/475656/google-color.svg"
-              className="w-4 h-4"
-            />
-            Login dengan Google
-          </button>
-
+            <a 
+              href="http://localhost:8000/auth/google" 
+              className="w-full border py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-50 transition text-sm mb-2 no-underline text-black"
+            >
+              <img
+                src="https://www.svgrepo.com/show/475656/google-color.svg"
+                className="w-4 h-4"
+                alt="Google Logo"
+              />
+              <span>Login dengan Google</span>
+            </a>
           <button
             onClick={handleFacebookLogin}
             className="w-full bg-blue-600 text-white py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition text-sm"
