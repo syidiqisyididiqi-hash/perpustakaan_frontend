@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { LoadingCard } from "@/app/admin/components/LoadingCard";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { FiArrowLeft, FiCalendar, FiBook, FiHash, FiMapPin, FiCheckCircle, FiAlertCircle, FiX } from "react-icons/fi";
+import Swal from "sweetalert2";
 
 const API_URL = "http://127.0.0.1:8000/api/books";
 const LOAN_API = "http://127.0.0.1:8000/api/loans";
 
+type Category = { id: number; name: string; description?: string };
 type Book = {
   id: number;
   title: string;
@@ -15,74 +17,62 @@ type Book = {
   publisher?: string;
   published_year?: number;
   rack_code?: string;
-  description?: string;
   stock: number;
   cover?: string;
+  category?: Category;
 };
 
 export default function BookDetailPage() {
-
   const { id } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [book, setBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
   const [showBorrow, setShowBorrow] = useState(false);
-
-  const [form, setForm] = useState({
-    borrow_date: "",
-    return_date: "",
-  });
+  const [form, setForm] = useState({ borrow_date: "", return_date: "" });
 
   useEffect(() => {
+    const tokenFromUrl = searchParams.get("token");
+    if (tokenFromUrl) {
+      localStorage.setItem("token", tokenFromUrl);
+      fetch("http://127.0.0.1:8000/api/user", {
+        headers: { Authorization: `Bearer ${tokenFromUrl}` },
+      })
+        .then((res) => res.json())
+        .then((user) => localStorage.setItem("user", JSON.stringify(user)));
+      window.history.replaceState({}, document.title, `/member/books/${id}`);
+    }
 
     const token = localStorage.getItem("token");
-
     if (!token) {
       router.push("/login");
       return;
     }
-
     fetchBook(token);
-
   }, []);
 
   const fetchBook = async (token: string) => {
-
     try {
-
       const res = await fetch(`${API_URL}/${id}`, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-
       const data = await res.json();
-
       setBook(data.data ?? data);
-
-    } catch {
-      console.error("Gagal mengambil detail buku");
+    } catch (err) {
+      console.error("Gagal mengambil detail buku", err);
     } finally {
       setLoading(false);
     }
-
   };
 
-  const handleBorrow = async (e: any) => {
-
+  const handleBorrow = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!book) return;
 
     try {
-
       const token = localStorage.getItem("token");
       const user = JSON.parse(localStorage.getItem("user") || "{}");
-
-      if (!user.id) {
-        alert("User tidak ditemukan, silakan login ulang");
-        return;
-      }
 
       const res = await fetch(LOAN_API, {
         method: "POST",
@@ -94,184 +84,192 @@ export default function BookDetailPage() {
           user_id: user.id,
           loan_date: form.borrow_date,
           due_date: form.return_date,
-          details: [{
-            book_id: book?.id,
-            qty: 1,
-            rack_code: book?.rack_code || "",
-          }],
+          details: [{ book_id: book.id, qty: 1, rack_code: book.rack_code || "-" }],
         }),
       });
 
       const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Gagal meminjam");
 
-      if (!res.ok) {
-        alert(data.message || "Gagal meminjam buku");
-        return;
-      }
-
-      alert("Buku berhasil dipinjam!");
-
-      setShowBorrow(false);
-
-      fetchBook(token || "");
-
-      setForm({
-        borrow_date: "",
-        return_date: "",
+      Swal.fire({
+        icon: "success",
+        title: "Peminjaman Berhasil!",
+        text: "Silahkan ambil buku di rak yang tertera.",
+        confirmButtonColor: "#4f46e5",
       });
 
-    } catch {
-
-      alert("Terjadi kesalahan server");
-
+      setShowBorrow(false);
+      fetchBook(token || "");
+    } catch (err: any) {
+      Swal.fire({ icon: "error", title: "Opps!", text: err.message });
     }
-
   };
 
-  if (loading) {
-    return <LoadingCard />;
-  }
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+    </div>
+  );
 
-  if (!book) {
-    return (
-      <div className="text-center py-20 text-red-400">
-        Buku tidak ditemukan
-      </div>
-    );
-  }
+  if (!book) return <div className="text-center py-20 text-slate-400 font-medium">Buku tidak ditemukan</div>;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto pb-20 px-4 sm:px-0">
 
       <button
         onClick={() => router.push("/member/books")}
-        className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm"
+        className="group mb-8 flex items-center gap-2 text-slate-500 hover:text-indigo-600 transition-colors font-semibold text-sm"
       >
-        ← Kembali
+        <FiArrowLeft className="group-hover:-translate-x-1 transition-transform" />
+        Kembali ke Katalog
       </button>
 
-      <div className="bg-white rounded-xl shadow p-8 grid md:grid-cols-2 gap-8">
+      <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col lg:flex-row">
+        
+        <div className="lg:w-[400px] p-8 lg:p-10 bg-slate-50 flex flex-col items-center justify-start border-r border-slate-100">
+          <div className="relative group w-full max-w-[280px]">
+            <img
+              src={book.cover ? `http://127.0.0.1:8000/storage/${book.cover}` : "/no-image.png"}
+              alt={book.title}
+              className="w-full aspect-[3/4.5] object-cover rounded-[2rem] shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]"
+            />
+            <div className="absolute inset-0 rounded-[2rem] shadow-inner pointer-events-none border border-black/5"></div>
+          </div>
+          
+          <div className="mt-8 w-full space-y-4">
+             <div className={`flex items-center gap-3 p-4 rounded-2xl border ${book.stock > 0 ? 'bg-green-50 border-green-100 text-green-700' : 'bg-red-50 border-red-100 text-red-600'}`}>
+                {book.stock > 0 ? <FiCheckCircle size={20}/> : <FiAlertCircle size={20}/>}
+                <div>
+                  <p className="text-[10px] uppercase font-black tracking-widest opacity-70">Status Ketersediaan</p>
+                  <p className="text-sm font-bold">{book.stock > 0 ? `Tersedia ${book.stock} pcs` : 'Sedang Kosong'}</p>
+                </div>
+             </div>
+          </div>
+        </div>
 
-        <img
-          src={
-            book.cover
-              ? `http://127.0.0.1:8000/storage/${book.cover}`
-              : "/no-image.png"
-          }
-          alt={book.title}
-          className="w-full h-[420px] object-cover rounded-lg"
-        />
-
-        <div className="flex flex-col">
-
-          <h1 className="text-3xl font-bold mb-3">
-            {book.title}
-          </h1>
-
-          <p className="text-gray-500 mb-4">
-            {book.author}
-          </p>
-
-          <div className="space-y-2 text-sm text-gray-700">
-
-            <p><b>ISBN:</b> {book.isbn || "-"}</p>
-            <p><b>Publisher:</b> {book.publisher || "-"}</p>
-            <p><b>Year:</b> {book.published_year || "-"}</p>
-            <p><b>Rack:</b> {book.rack_code || "-"}</p>
-            <p><b>Stock:</b> {book.stock}</p>
-
+        <div className="flex-1 p-8 lg:p-12">
+          <div className="mb-6">
+            <span className="inline-block px-4 py-1.5 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-wider mb-4">
+              {book.category?.name || "Uncategorized"}
+            </span>
+            <h1 className="text-4xl font-black text-slate-900 leading-tight mb-2 tracking-tight">
+              {book.title}
+            </h1>
+            <p className="text-xl text-slate-400 font-medium italic">by {book.author || "Unknown Author"}</p>
           </div>
 
-          <button
-            onClick={() => setShowBorrow(true)}
-            disabled={book.stock === 0}
-            className={`mt-6 py-3 rounded-lg font-semibold ${
-              book.stock > 0
-                ? "bg-green-600 text-white hover:bg-green-700"
-                : "bg-gray-300 text-gray-500"
-            }`}
-          >
-            Pinjam Buku
-          </button>
+          <div className="grid grid-cols-2 gap-6 py-8 border-y border-slate-100">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+                <FiHash size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">ISBN</p>
+                <p className="text-sm font-bold text-slate-700">{book.isbn || "-"}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+                <FiBook size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Penerbit</p>
+                <p className="text-sm font-bold text-slate-700">{book.publisher || "-"}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+                <FiCalendar size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Tahun Terbit</p>
+                <p className="text-sm font-bold text-slate-700">{book.published_year || "-"}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+                <FiMapPin size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Lokasi Rak</p>
+                <p className="text-sm font-bold text-indigo-600">{book.rack_code || "-"}</p>
+              </div>
+            </div>
+          </div>
 
-          {showBorrow && (
+          <div className="mt-8">
+            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-3">Tentang Kategori Ini</h3>
+            <p className="text-slate-500 leading-relaxed text-sm bg-slate-50 p-6 rounded-3xl italic">
+              "{book.category?.description || "Tidak ada deskripsi tambahan untuk kategori ini."}"
+            </p>
+          </div>
 
-            <form
-              onSubmit={handleBorrow}
-              className="mt-6 space-y-4 border-t pt-6"
+          <div className="mt-10 flex gap-4">
+            <button
+              onClick={() => setShowBorrow(true)}
+              disabled={book.stock === 0}
+              className={`flex-1 py-4 px-8 rounded-2xl font-black uppercase tracking-widest text-sm transition-all duration-300 ${
+                book.stock === 0
+                  ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                  : "bg-indigo-600 text-white shadow-xl shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-1 active:scale-95"
+              }`}
             >
+              {book.stock === 0 ? "Stok Tidak Tersedia" : "Ajukan Peminjaman"}
+            </button>
+          </div>
+        </div>
+      </div>
 
-              <h2 className="font-semibold text-lg">
-                Form Peminjaman Buku
-              </h2>
+      {showBorrow && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowBorrow(false)}></div>
+          <div className="relative bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 animate-in fade-in zoom-in duration-300">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Detail Pinjam</h2>
+              <button onClick={() => setShowBorrow(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                <FiX size={20}/>
+              </button>
+            </div>
 
-              <div>
-
-                <label className="text-sm">
-                  Tanggal Pinjam
-                </label>
-
-                <input
-                  type="date"
-                  required
-                  className="w-full border rounded-lg p-2"
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      borrow_date: e.target.value,
-                    })
-                  }
-                />
-
+            <form onSubmit={handleBorrow} className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tanggal Pinjam</label>
+                <div className="relative">
+                  <FiCalendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="date"
+                    required
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium"
+                    onChange={(e) => setForm({ ...form, borrow_date: e.target.value })}
+                  />
+                </div>
               </div>
 
-              <div>
-
-                <label className="text-sm">
-                  Tanggal Kembali
-                </label>
-
-                <input
-                  type="date"
-                  required
-                  className="w-full border rounded-lg p-2"
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      return_date: e.target.value,
-                    })
-                  }
-                />
-
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Batas Kembali</label>
+                <div className="relative">
+                  <FiCalendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="date"
+                    required
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium"
+                    onChange={(e) => setForm({ ...form, return_date: e.target.value })}
+                  />
+                </div>
               </div>
 
-              <div className="flex gap-3">
-
+              <div className="pt-4 flex gap-3">
                 <button
                   type="submit"
-                  className="bg-green-600 text-white px-6 py-2 rounded-lg"
+                  className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all"
                 >
                   Konfirmasi Pinjam
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowBorrow(false)}
-                  className="bg-gray-300 px-6 py-2 rounded-lg"
-                >
-                  Batal
-                </button>
-
               </div>
-
             </form>
-
-          )}
-
+          </div>
         </div>
-
-      </div>
-
+      )}
     </div>
   );
 }
