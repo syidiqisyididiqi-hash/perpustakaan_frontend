@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation"; 
 import { 
   ChevronRight, 
   Sparkles, 
@@ -28,18 +29,30 @@ export default function HomePage() {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const fetchBooks = async () => {
+    const initPage = async () => {
+      setLoading(true);
       try {
-        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+        const tokenFromUrl = searchParams.get("token");
         
+        if (tokenFromUrl) {
+          localStorage.setItem("token", tokenFromUrl);
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+
+        const token = localStorage.getItem("token");
         const res = await fetch(`${API_URL}/api/books`, {
           headers: {
             Authorization: token ? `Bearer ${token}` : "",
             Accept: "application/json",
           },
         });
+
+        if (res.status === 401) {
+          console.warn("Sesi tidak valid, silakan login ulang.");
+        }
 
         if (!res.ok) throw new Error("Gagal mengambil data");
         
@@ -54,8 +67,8 @@ export default function HomePage() {
       }
     };
 
-    fetchBooks();
-  }, []);
+    initPage();
+  }, [searchParams]); 
 
   const filteredBooks = books.filter((book) =>
     book.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -198,9 +211,7 @@ export default function HomePage() {
                   </div>
                 </Link>
               ))}
-              <div className="shrink-0 w-10 md:hidden" />
             </div>
-
             <div className="absolute top-0 right-0 h-full w-16 bg-gradient-to-l from-[#fafafa] to-transparent pointer-events-none hidden md:block" />
           </div>
         )}
