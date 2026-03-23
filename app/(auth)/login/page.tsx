@@ -171,17 +171,6 @@ export default function LoginPage() {
               />
               <span>Login dengan Google</span>
             </a>
-          <button
-            onClick={handleFacebookLogin}
-            className="w-full bg-blue-600 text-white py-2.5 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition text-sm"
-          >
-            <img
-              src="https://upload.wikimedia.org/wikipedia/commons/1/1b/Facebook_icon.svg"
-              className="w-4 h-4"
-            />
-            Login dengan Facebook
-          </button>
-
           <p className="text-center text-sm text-gray-500 mt-5">
             Belum punya akun?
             <Link href="/register" className="text-blue-600 ml-1 font-medium">
