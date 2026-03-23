@@ -114,7 +114,6 @@ export default function MemberNavbar() {
                 >
                   <FiUser size={18} />
                 </button>
-
                 <div
                   className={`absolute right-0 top-14 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 transition-all duration-200 origin-top-right ${
                     profileOpen
@@ -122,11 +121,6 @@ export default function MemberNavbar() {
                       : "opacity-0 scale-95 -translate-y-2 invisible"
                   }`}
                 >
-                  <div className="p-4 border-b">
-                    <p className="text-sm font-bold text-slate-800 leading-none">Member Name</p>
-                    <p className="text-xs text-slate-400 mt-1">member@email.com</p>
-                  </div>
-
                   <div className="p-1.5">
                     <button
                       onClick={() => {
