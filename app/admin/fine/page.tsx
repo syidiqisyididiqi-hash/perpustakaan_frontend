@@ -133,13 +133,6 @@ export default function FinePage() {
                 <FiSearch size={16} />
               </button>
             </div>
-
-            <Link href="/admin/fine/create">
-              <button className="flex items-center gap-2 bg-white text-red-700 px-5 py-2.5 rounded-xl text-sm font-semibold shadow hover:scale-105 transition">
-                <FiPlus size={16} />
-                Tambah Denda
-              </button>
-            </Link>
           </div>
         </div>
       </div>
