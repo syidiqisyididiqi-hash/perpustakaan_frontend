@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { FiSearch, FiChevronLeft, FiChevronRight, FiFilter, FiBookOpen } from "react-icons/fi";
 import Link from "next/link";
 
@@ -29,6 +30,7 @@ function SkeletonCard() {
 }
 
 export default function MemberBooksPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua");
   const [page, setPage] = useState(1);
@@ -42,18 +44,36 @@ export default function MemberBooksPage() {
   }, []);
 
   const fetchBooks = async () => {
+    setLoading(true);
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
       const res = await fetch(API_URL, {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/json",
         },
       });
+
+      if (res.status === 401 || res.status === 403) {
+        router.push("/login");
+        return;
+      }
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`Error fetch books status ${res.status}`, errorText);
+        return;
+      }
+
       const data = await res.json();
       setBooks(data.data ?? []);
     } catch (error) {
-      console.error("Error fetch books");
+      console.error("Error fetch books", error);
     } finally {
       setLoading(false);
     }

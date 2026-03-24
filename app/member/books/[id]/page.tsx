@@ -30,27 +30,73 @@ export default function BookDetailPage() {
   const [book, setBook] = useState<Book | null>(null);
   const [loading, setLoading] = useState(true);
   const [showBorrow, setShowBorrow] = useState(false);
-  const [form, setForm] = useState({ borrow_date: "", return_date: "" });
+  const [form, setForm] = useState({ borrow_date: "", return_date: "", qty: 1 });
+
+  const fetchCurrentUser = async (token: string) => {
+    const endpoint = "http://127.0.0.1:8000/api/profile";
+    try {
+      const userRes = await fetch(endpoint, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!userRes.ok) {
+        const errText = await userRes.text().catch(() => "");
+        console.warn(`fetchCurrentUser: ${endpoint} status ${userRes.status} ${userRes.statusText}`, errText);
+        return null;
+      }
+
+      const userJson = await userRes.json();
+      const userData = userJson.data ?? userJson;
+      if (userData?.id) {
+        localStorage.setItem("user", JSON.stringify(userData));
+        return userData;
+      }
+
+      console.warn(`fetchCurrentUser: ${endpoint} returned user object without id`, userData);
+      return null;
+    } catch (err: any) {
+      console.warn(`fetchCurrentUser: gagal nge-fetch ${endpoint}`, err.message || err);
+      return null;
+    }
+  };
 
   useEffect(() => {
-    const tokenFromUrl = searchParams.get("token");
-    if (tokenFromUrl) {
-      localStorage.setItem("token", tokenFromUrl);
-      fetch("http://127.0.0.1:8000/api/user", {
-        headers: { Authorization: `Bearer ${tokenFromUrl}` },
-      })
-        .then((res) => res.json())
-        .then((user) => localStorage.setItem("user", JSON.stringify(user)));
-      window.history.replaceState({}, document.title, `/member/books/${id}`);
-    }
+    const init = async () => {
+      const tokenFromUrl = searchParams.get("token");
+      if (tokenFromUrl) {
+        localStorage.setItem("token", tokenFromUrl);
+        await fetchCurrentUser(tokenFromUrl);
+        window.history.replaceState({}, document.title, `/member/books/${id}`);
+      }
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/login");
-      return;
-    }
-    fetchBook(token);
-  }, []);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
+      let userState = null;
+      try {
+        userState = JSON.parse(localStorage.getItem("user") || "null");
+      } catch {
+        userState = null;
+      }
+
+      if (!userState?.id) {
+        userState = await fetchCurrentUser(token);
+      }
+
+      if (!userState?.id) {
+        Swal.fire({ icon: "error", title: "Opps!", text: "Data pengguna tidak ditemukan. Silahkan login ulang." });
+        router.push("/login");
+        return;
+      }
+
+      fetchBook(token);
+    };
+
+    init();
+  }, [id, searchParams, router]);
 
   const fetchBook = async (token: string) => {
     try {
@@ -70,9 +116,40 @@ export default function BookDetailPage() {
     e.preventDefault();
     if (!book) return;
 
+    if (!form.borrow_date || !form.return_date) {
+      Swal.fire({ icon: "warning", title: "Perhatian", text: "Tanggal peminjaman dan pengembalian wajib diisi" });
+      return;
+    }
+
+    const qty = Number(form.qty ?? 1);
+    if (!qty || qty < 1 || qty > book.stock) {
+      Swal.fire({ icon: "warning", title: "Perhatian", text: `Jumlah harus antara 1 dan ${book.stock}` });
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
+      let user = null;
+      try {
+        user = JSON.parse(localStorage.getItem("user") || "null");
+      } catch {
+        user = null;
+      }
+
+      if (!user?.id) {
+        user = await fetchCurrentUser(token);
+      }
+
+      if (!user?.id) {
+        Swal.fire({ icon: "error", title: "Opps!", text: "Data pengguna tidak ditemukan. Silahkan login ulang." });
+        router.push("/login");
+        return;
+      }
 
       const res = await fetch(LOAN_API, {
         method: "POST",
@@ -84,7 +161,7 @@ export default function BookDetailPage() {
           user_id: user.id,
           loan_date: form.borrow_date,
           due_date: form.return_date,
-          details: [{ book_id: book.id, qty: 1, rack_code: book.rack_code || "-" }],
+          details: [{ book_id: book.id, qty, rack_code: book.rack_code || "-" }],
         }),
       });
 
@@ -256,6 +333,34 @@ export default function BookDetailPage() {
                     onChange={(e) => setForm({ ...form, return_date: e.target.value })}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Jumlah Buku</label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, qty: Math.max(1, Number(form.qty ?? 1) - 1) })}
+                    className="w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+                  >-</button>
+                  <input
+                    type="number"
+                    min={1}
+                    max={book.stock}
+                    value={form.qty}
+                    onChange={(e) => {
+                      const value = Math.max(1, Math.min(book.stock, Number(e.target.value) || 1));
+                      setForm({ ...form, qty: value });
+                    }}
+                    className="w-full text-center py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, qty: Math.min(book.stock, Number(form.qty ?? 1) + 1) })}
+                    className="w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-100"
+                  >+</button>
+                </div>
+                <p className="text-[10px] text-slate-400">Stok tersedia: {book.stock}</p>
               </div>
 
               <div className="pt-4 flex gap-3">

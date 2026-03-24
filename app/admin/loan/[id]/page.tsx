@@ -144,7 +144,7 @@ export default function LoanDetailPage() {
         </div>
 
         <button
-          onClick={() => router.push("/admin/loan")}
+          onClick={() => router.back()}
           className="bg-slate-900 text-white px-6 py-3 rounded-xl hover:opacity-90"
         >
           Kembali

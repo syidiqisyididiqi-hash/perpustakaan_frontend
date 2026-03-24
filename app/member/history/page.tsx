@@ -12,6 +12,8 @@ const API_URL = "http://127.0.0.1:8000/api/my-loans";
 
 type History = {
   id: number;
+  loanId: number;
+  detailId: number;
   fineId: number | null;
   book: string;
   rack: string;
@@ -56,18 +58,25 @@ export default function HistoryPage() {
 
       if (data.status) {
         const mapped = data.data.flatMap((loan: any) =>
-          loan.loan_details.map((detail: any) => ({
-            id: detail.id,
-            fineId: detail.fine_id,
-            book: detail.book?.title || "-",
-            rack: detail.rack_code || "-",
-            borrowDate: new Date(loan.loan_date).toLocaleDateString("id-ID"),
-            dueDate: new Date(loan.due_date).toLocaleDateString("id-ID"),
-            returnedAt: detail.returned_at ? new Date(detail.returned_at).toLocaleDateString("id-ID") : null,
-            fine: detail.fine_total || 0,
-            fineStatus: detail.fine_status,
-            overdueDays: detail.overdue_days || 0,
-          }))
+          loan.loan_details.map((detail: any) => {
+            const loanId = loan.id || loan.loan_id || detail.loan_id || null;
+            const detailId = detail.id || detail.detail_id || null;
+
+            return {
+              id: detail.id ?? detail.detail_id ?? Math.floor(Math.random() * 1000000),
+              loanId,
+              detailId,
+              fineId: detail.fine_id,
+              book: detail.book?.title || "-",
+              rack: detail.rack_code || "-",
+              borrowDate: new Date(loan.loan_date).toLocaleDateString("id-ID"),
+              dueDate: new Date(loan.due_date).toLocaleDateString("id-ID"),
+              returnedAt: detail.returned_at ? new Date(detail.returned_at).toLocaleDateString("id-ID") : null,
+              fine: detail.fine_total || 0,
+              fineStatus: detail.fine_status,
+              overdueDays: detail.overdue_days || 0,
+            };
+          })
         );
         setHistories(mapped);
       }
@@ -97,6 +106,47 @@ export default function HistoryPage() {
         fetchHistory();
       }
     } catch (err) { console.error(err); }
+  };
+
+  const handleReturn = async (loanId: number | null, detailId: number | null) => {
+    if (!loanId) {
+      Swal.fire({ icon: "error", title: "Error", text: "ID pinjaman tidak tersedia. Tidak dapat melakukan pengembalian." });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
+      const payload = { return_date: new Date().toISOString().split("T")[0] };
+
+      const res = await fetch(`http://127.0.0.1:8000/api/loans/${loanId}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "");
+        console.error("Gagal return loan", res.status, errText);
+        Swal.fire({ icon: "error", title: "Gagal", text: "Tidak dapat mengembalikan buku (status API)." });
+        return;
+      }
+
+      const result = await res.json();
+      if (result.status) {
+        Swal.fire({ icon: "success", title: "Berhasil", text: "Buku telah dikembalikan", confirmButtonColor: "#4f46e5" });
+        fetchHistory();
+      } else {
+        Swal.fire({ icon: "error", title: "Gagal", text: result.message || "Tidak dapat mengembalikan buku" });
+      }
+    } catch (err) {
+      console.error(err);
+      Swal.fire({ icon: "error", title: "Error", text: "Terjadi kesalahan saat proses pengembalian" });
+    }
   };
 
   return (
@@ -185,14 +235,23 @@ export default function HistoryPage() {
                         ) : <span className="text-slate-300">—</span>}
                       </td>
                       <td className="px-6 py-5 text-center">
-                        {h.fine > 0 && h.fineStatus !== "paid" ? (
+                        {!h.returnedAt ? (
+                          <button
+                            onClick={() => handleReturn(h.loanId, h.detailId)}
+                            className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 hover:-translate-y-0.5 active:scale-95"
+                          >
+                            Kembalikan
+                          </button>
+                        ) : h.fine > 0 && h.fineStatus !== "paid" ? (
                           <button
                             onClick={() => { setSelectedFine(h.fineId); setShowPayment(true); }}
                             className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 hover:-translate-y-0.5 active:scale-95"
                           >
                             Bayar
                           </button>
-                        ) : <FiCheckCircle className="inline text-emerald-400" size={20} />}
+                        ) : (
+                          <FiCheckCircle className="inline text-emerald-400" size={20} />
+                        )}
                       </td>
                     </tr>
                   );
