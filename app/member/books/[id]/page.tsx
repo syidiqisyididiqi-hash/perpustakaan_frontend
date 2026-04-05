@@ -134,17 +134,7 @@ export default function BookDetailPage() {
         return;
       }
 
-      let user = null;
-      try {
-        user = JSON.parse(localStorage.getItem("user") || "null");
-      } catch {
-        user = null;
-      }
-
-      if (!user?.id) {
-        user = await fetchCurrentUser(token);
-      }
-
+      const user = await fetchCurrentUser(token);
       if (!user?.id) {
         Swal.fire({ icon: "error", title: "Opps!", text: "Data pengguna tidak ditemukan. Silahkan login ulang." });
         router.push("/login");
@@ -176,7 +166,7 @@ export default function BookDetailPage() {
       });
 
       setShowBorrow(false);
-      fetchBook(token || "");
+      fetchBook(token);
     } catch (err: any) {
       Swal.fire({ icon: "error", title: "Opps!", text: err.message });
     }
